@@ -7,15 +7,30 @@ RUN pip install --no-cache-dir \
     resampy \
     soundfile
 
-# Default model - can be overridden via command line
+# GPU & NCCL optimization (from working Qwen config)
+ENV CUDA_DEVICE_ORDER=PCI_BUS_ID \
+    NCCL_P2P_DISABLE=0 \
+    NCCL_IB_DISABLE=1 \
+    NCCL_P2P_LEVEL=PXB \
+    NCCL_SOCKET_IFNAME=lo \
+    NCCL_NSLS_ENABLE=1 \
+    NCCL_GRAPH_MIX_PRECISION=1 \
+    NCCL_MIN_NRINGS=4 \
+    NCCL_BUFFSIZE=4194304 \
+    NCCL_ALGO=Ring \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:512 \
+    OMP_NUM_THREADS=16 \
+    VLLM_WORKER_MULTIPROC_METHOD=spawn \
+    VLLM_SLEEP_WHEN_IDLE=1 \
+    VLLM_ATTENTION_BACKEND=FLASHINFER
+
+# Default model
 ENV DEFAULT_MODEL="openai/whisper-large-v3"
 
-# Default command - can be overridden
 CMD ["openai/whisper-large-v3", \
      "--port", "8001", \
-     "--served-model-name", "openai/whisper-large-v3", \
-     "--gpu-memory-utilization", "0.45", \
+     "--served-model-name", "whisper", \
+     "--gpu-memory-utilization", "0.8", \
      "--max-num-seqs", "8", \
-     "--swap-space", "4", \
-     "--disable-log-requests", \
-     "--enforce-eager"]
+     "--swap-space", "10", \
+     "--disable-log-requests"]
