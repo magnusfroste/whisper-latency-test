@@ -1,0 +1,21 @@
+FROM vllm/vllm-openai:latest
+
+# Install audio dependencies for Whisper support
+RUN pip install --no-cache-dir \
+    "vllm[audio]" \
+    librosa \
+    resampy \
+    soundfile
+
+# Default model - can be overridden via command line
+ENV DEFAULT_MODEL="openai/whisper-large-v3"
+
+# Default command - can be overridden
+CMD ["openai/whisper-large-v3", \
+     "--port", "8001", \
+     "--served-model-name", "openai/whisper-large-v3", \
+     "--gpu-memory-utilization", "0.45", \
+     "--max-num-seqs", "8", \
+     "--swap-space", "4", \
+     "--disable-log-requests", \
+     "--enforce-eager"]
