@@ -18,7 +18,8 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
   const [health, setHealth] = useState<HealthStatus | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const isProcessingRef = useRef(false) // Use ref for mutable access in async callbacks
+  const chunksRef = useRef<Blob[]>([])
+  const isProcessingRef = useRef(false)
 
   const checkHealth = async () => {
     try {
@@ -43,15 +44,6 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
     console.log('[Realtime] Re-render triggered, text:', transcribedText.substring(0, 50))
   }, [transcribedText])
 
-  // Track processing state for UI
-  const [isProcessingUI, setIsProcessingUI] = useState(false)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsProcessingUI(isProcessingRef.current)
-    }, 100)
-    return () => clearInterval(interval)
-  }, [])
-
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -59,15 +51,14 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
         mimeType: 'audio/webm;codecs=opus'
       })
 
+      chunksRef.current = []
       setTranscribedText('')
       setError(null)
 
-      // Send each chunk directly when available (no merging!)
-      mediaRecorder.ondataavailable = async (event) => {
+      // Collect chunks
+      mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          console.log('[Realtime] Chunk mottagen:', event.data.size, 'bytes')
-          // Send immediately - each chunk is a valid WebM file
-          await sendChunk(event.data)
+          chunksRef.current.push(event.data)
         }
       }
 
@@ -76,7 +67,7 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
       }
 
       mediaRecorderRef.current = mediaRecorder
-      mediaRecorder.start(1000) // Get chunks every 1 second
+      mediaRecorder.start(5000) // Get chunks every 5 seconds
       setIsRecording(true)
       console.log('[Realtime] Inspeking startad')
     } catch (err) {
@@ -93,19 +84,22 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
     }
   }
 
-  // Send chunk function
-  const sendChunk = async (chunk: Blob) => {
-    // Skip if already processing to avoid queue buildup
-    if (isProcessingRef.current) {
-      console.log('[Realtime] Hoppar över - bearbetar redan')
+  // Send accumulated chunks
+  const sendChunks = async () => {
+    if (chunksRef.current.length === 0 || isProcessingRef.current) {
       return
     }
 
     isProcessingRef.current = true
-    const formData = new FormData()
-    formData.append('file', chunk, 'recording.webm')
+    const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+    chunksRef.current = []
+
+    console.log('[Realtime] Skickar chunk:', blob.size, 'bytes')
 
     try {
+      const formData = new FormData()
+      formData.append('file', blob, 'recording.webm')
+
       const response = await fetch('/api/transcribe', {
         method: 'POST',
         body: formData
@@ -130,6 +124,17 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
       isProcessingRef.current = false
     }
   }
+
+  // Send chunks every 10 seconds
+  useEffect(() => {
+    if (!isRecording) return
+
+    const interval = setInterval(() => {
+      sendChunks()
+    }, 10000) // 10 seconds for complete WebM files
+
+    return () => clearInterval(interval)
+  }, [isRecording])
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(transcribedText)
@@ -193,7 +198,7 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
           <div className="text-center mb-4">
             <span className="inline-flex items-center gap-2 text-red-400">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              Spelar in... ({isProcessingUI ? 'Skickar & bearbetar...' : 'Samlar in ljud'})
+              Spelar in... (uppdateras var 10:e sekund)
             </span>
           </div>
         )}
@@ -236,7 +241,7 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
           <h3 className="font-semibold mb-2">Instruktioner:</h3>
           <ul className="text-sm text-gray-400 space-y-1">
             <li>• Klicka "Starta" för att börja transkribera</li>
-            <li>• Texten uppdateras automatiskt var 1:a sekund medan du pratar</li>
+            <li>• Texten uppdateras automatiskt var 10:e sekund medan du pratar</li>
             <li>• Klicka "Stoppa" när du är klar</li>
             <li>• Kopiera eller rensa texten</li>
           </ul>
