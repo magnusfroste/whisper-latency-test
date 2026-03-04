@@ -69,7 +69,7 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
       }
 
       mediaRecorderRef.current = mediaRecorder
-      mediaRecorder.start(3000) // Get chunks every 3 seconds
+      mediaRecorder.start(5000) // Get chunks every 5 seconds for better quality
       setIsRecording(true)
     } catch (err) {
       setError('Kunde inte tillgripa mikrofonen.')
@@ -118,7 +118,7 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
           console.warn('[Realtime] Transkriberingsfel:', err)
         }
       }
-    }, 2000) // Send chunks every 2 seconds for near-realtime
+    }, 5000) // Send chunks every 5 seconds for better audio quality
 
     return () => clearInterval(interval)
   }, [isRecording])
@@ -185,7 +185,7 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
           <div className="text-center mb-4">
             <span className="inline-flex items-center gap-2 text-red-400">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              Spelar in... (uppdateras var 2:a sekund)
+              Spelar in... (uppdateras var 5:e sekund)
             </span>
           </div>
         )}
@@ -228,7 +228,7 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
           <h3 className="font-semibold mb-2">Instruktioner:</h3>
           <ul className="text-sm text-gray-400 space-y-1">
             <li>• Klicka "Starta" för att börja transkribera</li>
-            <li>• Texten uppdateras automatiskt var 2:a sekund</li>
+            <li>• Texten uppdateras automatiskt var 5:e sekund</li>
             <li>• Klicka "Stoppa" när du är klar</li>
             <li>• Kopiera eller rensa texten</li>
           </ul>
