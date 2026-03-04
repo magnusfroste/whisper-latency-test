@@ -121,3 +121,4 @@ Vid push till `main` branch bygger och pushar GitHub Actions automatiskt Docker 
 | `HF_TOKEN` | Hugging Face token för model download | - |
 | `WHISPER_URL` | URL till Whisper VLLM-server | `http://whisper-vllm:8001` |
 | `PORT` | Port för test-appen | `3000` |
+
