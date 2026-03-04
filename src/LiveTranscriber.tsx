@@ -43,13 +43,6 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
     checkHealth()
   }, [])
 
-  // Update DOM when liveTextRef changes
-  useEffect(() => {
-    if (liveTextElementRef.current && liveTextRef.current) {
-      liveTextElementRef.current.textContent = liveTextRef.current
-      console.log('[Live] DOM uppdaterad:', liveTextRef.current.substring(0, 50))
-    }
-  }, [liveTextRef.current])
 
   const startRecording = async () => {
     try {
@@ -150,7 +143,14 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
       // Update text ref and force re-render
       liveTextRef.current = newText
       setRenderKey(k => k + 1) // Force re-render
-      console.log('[Live] Text sparad i ref:', newText.substring(0, 50))
+
+      // Direct DOM update with requestAnimationFrame
+      if (liveTextElementRef.current) {
+        requestAnimationFrame(() => {
+          liveTextElementRef.current!.textContent = newText
+          console.log('[Live] DOM uppdaterad:', newText.substring(0, 50))
+        })
+      }
     } catch (err) {
       console.warn('[Live] Transkriberingsfel:', err)
       // Don't show error, just skip this chunk
