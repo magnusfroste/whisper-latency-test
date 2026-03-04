@@ -18,7 +18,7 @@ WORKDIR /app
 
 # Copy built frontend and compiled server
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/index.js ./server/
+COPY --from=builder /app/server/index.js ./server/
 COPY --from=builder /app/node_modules ./node_modules
 COPY package*.json ./
 
