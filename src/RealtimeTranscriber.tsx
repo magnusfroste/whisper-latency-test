@@ -18,7 +18,6 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
   const [health, setHealth] = useState<HealthStatus | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
   const isProcessingRef = useRef(false)
 
   const checkHealth = async () => {
@@ -51,14 +50,14 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
         mimeType: 'audio/webm;codecs=opus'
       })
 
-      chunksRef.current = []
       setTranscribedText('')
       setError(null)
 
-      // Collect chunks
-      mediaRecorder.ondataavailable = (event) => {
+      // Send each chunk directly - MediaRecorder will provide complete chunks at 10s intervals
+      mediaRecorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
-          chunksRef.current.push(event.data)
+          console.log('[Realtime] Chunk mottagen:', event.data.size, 'bytes')
+          await sendChunk(event.data)
         }
       }
 
@@ -67,7 +66,8 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
       }
 
       mediaRecorderRef.current = mediaRecorder
-      mediaRecorder.start(5000) // Get chunks every 5 seconds
+      // Start with 10 second interval to get complete WebM chunks
+      mediaRecorder.start(10000)
       setIsRecording(true)
       console.log('[Realtime] Inspeking startad')
     } catch (err) {
@@ -84,21 +84,18 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
     }
   }
 
-  // Send accumulated chunks
-  const sendChunks = async () => {
-    if (chunksRef.current.length === 0 || isProcessingRef.current) {
+  // Send chunk directly from MediaRecorder
+  const sendChunk = async (chunk: Blob) => {
+    if (isProcessingRef.current) {
+      console.log('[Realtime] Hoppar över - bearbetar redan')
       return
     }
 
     isProcessingRef.current = true
-    const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-    chunksRef.current = []
-
-    console.log('[Realtime] Skickar chunk:', blob.size, 'bytes')
 
     try {
       const formData = new FormData()
-      formData.append('file', blob, 'recording.webm')
+      formData.append('file', chunk, 'recording.webm')
 
       const response = await fetch('/api/transcribe', {
         method: 'POST',
@@ -124,17 +121,6 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
       isProcessingRef.current = false
     }
   }
-
-  // Send chunks every 10 seconds
-  useEffect(() => {
-    if (!isRecording) return
-
-    const interval = setInterval(() => {
-      sendChunks()
-    }, 10000) // 10 seconds for complete WebM files
-
-    return () => clearInterval(interval)
-  }, [isRecording])
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(transcribedText)
