@@ -6,9 +6,6 @@ import { fileURLToPath } from 'url'
 import fs from 'fs'
 import os from 'os'
 
-// Declare module for fluent-ffmpeg (no types available)
-declare module 'fluent-ffmpeg'
-
 import ffmpeg from 'fluent-ffmpeg'
 
 // Set ffmpeg path
