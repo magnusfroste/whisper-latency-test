@@ -6,11 +6,11 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "esModuleInterop": true,
-    "outDir": "./",
+    "outDir": "./server/",
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["server/**/*", "*.d.ts"],
-  "exclude": []
+  "include": ["server/**/*.ts", "*.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }
