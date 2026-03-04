@@ -27,18 +27,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
+      - name: Extract metadata (test app)
+        id: meta-app
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=
+          tags: type=sha,prefix=
 
-      - name: Build and push Docker image
+      - name: Build and push test app image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-app.outputs.tags }}
+
+      - name: Extract metadata (vllm)
+        id: meta-vllm
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-vllm
+          tags: type=sha,prefix=
+
+      - name: Build and push VLLM image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.whisper-vllm
+          push: true
+          tags: ${{ steps.meta-vllm.outputs.tags }}
