@@ -20,6 +20,8 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
   const [health, setHealth] = useState<HealthStatus | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const checkHealth = async () => {
     try {
@@ -37,6 +39,9 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
 
   useEffect(() => {
     checkHealth()
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
   }, [])
 
   const startRecording = async () => {
@@ -46,15 +51,16 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
         mimeType: 'audio/webm;codecs=opus'
       })
 
+      chunksRef.current = []
       setLiveText('')
       setFinalText('')
       setError(null)
 
-      // Send transcription on each dataavailable event
-      mediaRecorder.ondataavailable = async (event) => {
+      // Collect chunks as they come in
+      mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
+          chunksRef.current.push(event.data)
           console.log('[Live] Chunk mottagen:', event.data.size, 'bytes')
-          await sendChunk(event.data)
         }
       }
 
@@ -63,9 +69,19 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
       }
 
       mediaRecorderRef.current = mediaRecorder
-      // Start with timeslice of 5000ms to get data every 5 seconds
-      mediaRecorder.start(5000)
+      // Start recording without timeslice - chunks arrive naturally
+      mediaRecorder.start()
       setIsRecording(true)
+
+      // Send chunks every 3 seconds
+      intervalRef.current = setInterval(async () => {
+        if (chunksRef.current.length > 0) {
+          const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+          console.log('[Live] Skickar chunk:', blob.size, 'bytes')
+          await sendChunk(blob)
+          chunksRef.current = [] // Clear after sending
+        }
+      }, 3000)
 
       console.log('[Live] Inspeking startad')
     } catch (err) {
@@ -76,6 +92,10 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
 
   const stopRecording = async () => {
     if (mediaRecorderRef.current && isRecording) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
       mediaRecorderRef.current.stop()
       setIsRecording(false)
       console.log('[Live] Inspeking stoppad')
