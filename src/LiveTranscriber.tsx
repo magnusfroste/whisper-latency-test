@@ -13,15 +13,16 @@ interface HealthStatus {
 
 export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
   const [isRecording, setIsRecording] = useState(false)
-  const [liveText, setLiveText] = useState('')
-  const [finalText, setFinalText] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [health, setHealth] = useState<HealthStatus | null>(null)
+  const [finalText, setFinalText] = useState('')
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const lastSendTimeRef = useRef<number>(0)
+  const liveTextRef = useRef('')
+  const liveTextElementRef = useRef<HTMLParagraphElement>(null)
 
   const checkHealth = async () => {
     try {
@@ -41,18 +42,6 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
     checkHealth()
   }, [])
 
-  // Log liveText changes
-  useEffect(() => {
-    if (liveText) {
-      console.log('[Live] liveText uppdaterad:', liveText.substring(0, 50))
-    }
-  }, [liveText])
-
-  // Log isProcessing changes
-  useEffect(() => {
-    console.log('[Live] isProcessing:', isProcessing)
-  }, [isProcessing])
-
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -61,7 +50,7 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
       })
 
       chunksRef.current = []
-      setLiveText('')
+      liveTextRef.current = ''
       setFinalText('')
       setError(null)
       lastSendTimeRef.current = 0
@@ -143,13 +132,17 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
       const data = await response.json()
       console.log('[Live] Transkribering:', data.text)
 
-      // Append to live text
-      setLiveText(prev => {
-        console.log('[Live] setLiveText prev:', prev)
-        const newText = prev && !data.text.startsWith(prev) ? prev + ' ' + data.text : data.text
-        console.log('[Live] setLiveText ny text:', newText)
-        return newText
-      })
+      // Update live text ref and DOM directly
+      const newText = liveTextRef.current && !data.text.startsWith(liveTextRef.current)
+        ? liveTextRef.current + ' ' + data.text
+        : data.text
+      liveTextRef.current = newText
+
+      // Update DOM directly for real-time update
+      if (liveTextElementRef.current) {
+        liveTextElementRef.current.textContent = newText
+        console.log('[Live] DOM uppdaterad:', newText.substring(0, 50))
+      }
     } catch (err) {
       console.warn('[Live] Transkriberingsfel:', err)
       // Don't show error, just skip this chunk
@@ -159,13 +152,16 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
   }
 
   const copyToClipboard = () => {
-    const textToCopy = finalText || liveText
+    const textToCopy = finalText || liveTextRef.current
     navigator.clipboard.writeText(textToCopy)
     alert('Text kopierad till urklipp!')
   }
 
   const clearText = () => {
-    setLiveText('')
+    liveTextRef.current = ''
+    if (liveTextElementRef.current) {
+      liveTextElementRef.current.textContent = ''
+    }
     setFinalText('')
   }
 
@@ -246,7 +242,7 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
         )}
 
         {/* Live transcription display */}
-        {(liveText || finalText) && (
+        {(liveTextRef.current || finalText) && (
           <div className="mb-6">
             {/* Action buttons */}
             <div className="flex gap-2 mb-3">
@@ -273,15 +269,13 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
             )}
 
             {/* Live text (while recording) */}
-            {liveText && (
-              <div className="bg-blue-900/20 rounded-lg p-6 border border-blue-700">
-                <h3 className="text-sm text-blue-400 mb-2 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                  Live (uppdateras medan du pratar):
-                </h3>
-                <p className="text-lg leading-relaxed">{liveText}</p>
-              </div>
-            )}
+            <div className="bg-blue-900/20 rounded-lg p-6 border border-blue-700">
+              <h3 className="text-sm text-blue-400 mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                Live (uppdateras medan du pratar):
+              </h3>
+              <p ref={liveTextElementRef} className="text-lg leading-relaxed">{liveTextRef.current}</p>
+            </div>
           </div>
         )}
 
