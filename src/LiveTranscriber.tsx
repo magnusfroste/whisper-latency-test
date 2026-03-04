@@ -42,6 +42,14 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
     checkHealth()
   }, [])
 
+  // Update DOM when liveTextRef changes
+  useEffect(() => {
+    if (liveTextElementRef.current && liveTextRef.current) {
+      liveTextElementRef.current.textContent = liveTextRef.current
+      console.log('[Live] DOM uppdaterad:', liveTextRef.current.substring(0, 50))
+    }
+  }, [liveTextRef.current])
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -138,11 +146,9 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
         : data.text
       liveTextRef.current = newText
 
-      // Update DOM directly for real-time update
-      if (liveTextElementRef.current) {
-        liveTextElementRef.current.textContent = newText
-        console.log('[Live] DOM uppdaterad:', newText.substring(0, 50))
-      }
+      // Store text in ref for useEffect to update DOM
+      liveTextRef.current = newText
+      console.log('[Live] Text sparad i ref:', newText.substring(0, 50))
     } catch (err) {
       console.warn('[Live] Transkriberingsfel:', err)
       // Don't show error, just skip this chunk
