@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import LiveTranscriber from './LiveTranscriber'
 
 interface Transcription {
   text: string
@@ -14,6 +15,7 @@ interface HealthStatus {
 }
 
 function App() {
+  const [view, setView] = useState<'push' | 'live'>('push')
   const [isRecording, setIsRecording] = useState(false)
   const [currentResult, setCurrentResult] = useState<string | null>(null)
   const [currentLatency, setCurrentLatency] = useState<number | null>(null)
@@ -145,12 +147,41 @@ function App() {
     })
   }
 
+  // Show live transcriber view
+  if (view === 'live') {
+    return <LiveTranscriber onBack={() => setView('push')} />
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-8">
           Whisper Latens-test
         </h1>
+
+        {/* View Switcher */}
+        <div className="flex justify-center gap-4 mb-8">
+          <button
+            onClick={() => setView('push')}
+            className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
+              view === 'push'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Push-to-Talk
+          </button>
+          <button
+            onClick={() => setView('live')}
+            className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
+              view === 'live'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Live Transkribering
+          </button>
+        </div>
 
         {/* Health Status */}
         <div className={`rounded-lg p-4 mb-6 border ${
