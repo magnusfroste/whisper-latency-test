@@ -27,7 +27,9 @@ ENV CUDA_DEVICE_ORDER=PCI_BUS_ID \
 # Default model
 ENV DEFAULT_MODEL="openai/whisper-large-v3"
 
-CMD ["--model", "openai/whisper-large-v3", \
+ENTRYPOINT ["vllm", "serve"]
+
+CMD ["openai/whisper-large-v3", \
      "--port", "8001", \
      "--served-model-name", "whisper", \
      "--gpu-memory-utilization", "0.8", \
