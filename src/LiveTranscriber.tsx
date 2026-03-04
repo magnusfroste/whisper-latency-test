@@ -21,7 +21,7 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
-  const lastSendTimeRef = useRef<number>(0)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const checkHealth = async () => {
     try {
@@ -53,23 +53,12 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
       setLiveText('')
       setFinalText('')
       setError(null)
-      lastSendTimeRef.current = 0
 
       // Collect chunks as they come in
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunksRef.current.push(event.data)
           console.log('[Live] Chunk mottagen:', event.data.size, 'bytes')
-
-          // Send immediately if enough time has passed
-          const now = Date.now()
-          if (now - lastSendTimeRef.current > 2000) {
-            const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-            console.log('[Live] Skickar chunk direkt:', blob.size, 'bytes')
-            sendChunk(blob)
-            chunksRef.current = []
-            lastSendTimeRef.current = now
-          }
         }
       }
 
@@ -88,6 +77,16 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
       mediaRecorder.start()
       setIsRecording(true)
 
+      // Send chunks every 5 seconds for better audio quality
+      intervalRef.current = setInterval(async () => {
+        if (chunksRef.current.length > 0) {
+          const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+          console.log('[Live] Skickar chunk:', blob.size, 'bytes')
+          await sendChunk(blob)
+          chunksRef.current = []
+        }
+      }, 5000)
+
       console.log('[Live] Inspeking startad')
     } catch (err) {
       setError('Kunde inte tillgripa mikrofonen.')
@@ -97,6 +96,10 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
 
   const stopRecording = async () => {
     if (mediaRecorderRef.current && isRecording) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
       mediaRecorderRef.current.stop()
       setIsRecording(false)
       console.log('[Live] Inspeking stoppad')
@@ -221,7 +224,7 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
           <div className="text-center mb-4">
             <span className="inline-flex items-center gap-2 text-red-400">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              Inspekar... ({isProcessing ? 'Bearbetar...' : 'Lyssnar'})
+              Inspekar... ({isProcessing ? 'Skickar & bearbetar...' : 'Samlar in ljud'})
             </span>
           </div>
         )}
@@ -281,7 +284,7 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
           <h3 className="font-semibold mb-2">Instruktioner:</h3>
           <ul className="text-sm text-gray-400 space-y-1">
             <li>• Klicka "Spela in" för att börja transkribera</li>
-            <li>• Texten uppdateras automatiskt var 5:e sekund</li>
+            <li>• Texten uppdateras automatiskt var 5:e sekund medan du pratar</li>
             <li>• Klicka "Stoppa" när du är klar</li>
             <li>• Kopiera texten eller rensa för nytt</li>
           </ul>

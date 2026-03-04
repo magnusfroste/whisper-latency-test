@@ -13,13 +13,13 @@ interface HealthStatus {
 
 export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps) {
   const [isRecording, setIsRecording] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [transcribedText, setTranscribedText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [health, setHealth] = useState<HealthStatus | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
-  const lastSendTimeRef = useRef<number>(0)
 
   const checkHealth = async () => {
     try {
@@ -54,7 +54,6 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
       chunksRef.current = []
       setTranscribedText('')
       setError(null)
-      lastSendTimeRef.current = 0
 
       // Collect chunks
       mediaRecorder.ondataavailable = (event) => {
@@ -88,7 +87,14 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
     if (!isRecording) return
 
     const interval = setInterval(async () => {
+      // Skip if already processing to avoid queue buildup
+      if (isProcessing) {
+        console.log('[Realtime] Hoppar över - bearbetar redan')
+        return
+      }
+
       if (chunksRef.current.length > 0) {
+        setIsProcessing(true)
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
         chunksRef.current = []
 
@@ -103,6 +109,7 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
 
           if (response.ok) {
             const data = await response.json()
+            console.log('[Realtime] Transkribering:', data.text)
             setTranscribedText(prev => {
               const newText = prev && !data.text.startsWith(prev)
                 ? prev + ' ' + data.text
@@ -110,15 +117,19 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
               console.log('[Realtime] Text:', newText.substring(0, 50))
               return newText
             })
+          } else {
+            console.warn('[Realtime] Transkribering misslyckades:', response.status)
           }
         } catch (err) {
           console.warn('[Realtime] Transkriberingsfel:', err)
+        } finally {
+          setIsProcessing(false)
         }
       }
     }, 5000) // Send chunks every 5 seconds for better audio quality
 
     return () => clearInterval(interval)
-  }, [isRecording])
+  }, [isRecording, isProcessing])
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(transcribedText)
@@ -182,7 +193,7 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
           <div className="text-center mb-4">
             <span className="inline-flex items-center gap-2 text-red-400">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              Spelar in... (uppdateras var 5:e sekund)
+              Spelar in... ({isProcessing ? 'Skickar & bearbetar...' : 'Samlar in ljud'})
             </span>
           </div>
         )}
