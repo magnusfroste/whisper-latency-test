@@ -99,7 +99,7 @@ app.post('/api/transcribe', upload.single('file'), async (req: MulterRequest, re
 
   let audioBuffer = req.file.buffer
 
-  // Convert WebM/Opus to WAV if needed
+  // Try to convert WebM/Opus to WAV if needed
   if (req.file.mimetype.includes('webm') || req.file.mimetype.includes('ogg')) {
     console.log('[Transcribe] Konverterar WebM/OGG till WAV...')
     const convertStart = Date.now()
@@ -108,15 +108,18 @@ app.post('/api/transcribe', upload.single('file'), async (req: MulterRequest, re
       console.log('[Transcribe] Konvertering klar på', Date.now() - convertStart, 'ms')
       console.log('[Transcribe] WAV storlek:', audioBuffer.length, 'bytes')
     } catch (err) {
-      console.error('[Transcribe] Konvertering misslyckades:', err)
-      // Fallback: try sending original anyway
-      console.log('[Transcribe] Försöker med originalfil...')
+      console.error('[Transcribe] Konvertering misslyckades:', err.message.substring(0, 50))
+      // Fallback: try sending original WebM directly
+      console.log('[Transcribe] Försöker med original WebM-fil...')
       audioBuffer = req.file.buffer
     }
   }
 
+  // Determine filename based on actual format
+  const filename = req.file.mimetype.includes('webm') ? 'recording.webm' : 'audio.wav'
+
   const formData = new FormData()
-  formData.append('file', new Blob([audioBuffer as unknown as BlobPart]), 'audio.wav')
+  formData.append('file', new Blob([audioBuffer as unknown as BlobPart]), filename)
   formData.append('model', 'openai/whisper-large-v3')
   formData.append('language', 'sv')
   formData.append('response_format', 'json')
