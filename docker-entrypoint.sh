@@ -15,5 +15,5 @@ else
     ls -la /dev/nvidia* 2>/dev/null || echo "No nvidia devices found"
 fi
 
-# Execute the original entrypoint with all arguments
-exec "$@"
+# Execute vllm serve with all arguments
+exec vllm serve "$@"
