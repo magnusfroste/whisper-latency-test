@@ -288,6 +288,51 @@ function App() {
           </button>
         </div>
 
+        {/* Autoversio Section */}
+        <div className="max-w-6xl mx-auto px-4 py-20">
+          <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 border border-blue-700/50 rounded-2xl p-8 md:p-12">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold mb-4">About Autoversio</h2>
+              <p className="text-xl text-gray-300">
+                Local Swedish AI Provider
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+                <div className="text-3xl mb-4">☁️</div>
+                <h3 className="text-xl font-semibold mb-3 text-blue-400">Semi-Local Services</h3>
+                <p className="text-gray-400">
+                  Cloud-hosted transcription and LLM services with data processed in Sweden.
+                  Combines convenience with privacy compliance for organizations that need
+                  flexibility without compromising on data sovereignty.
+                </p>
+              </div>
+
+              <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+                <div className="text-3xl mb-4">🏢</div>
+                <h3 className="text-xl font-semibold mb-3 text-purple-400">Fully Local On-Premises</h3>
+                <p className="text-gray-400">
+                  Complete on-premise deployment with hardware provision for maximum
+                  data sovereignty. Perfect for organizations requiring offline capability,
+                  strict data control, and complete independence from external infrastructure.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center mt-8">
+              <a
+                href="https://www.autoversio.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors text-lg font-semibold"
+              >
+                Learn more at www.autoversio.ai →
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* Footer */}
         <div className="border-t border-gray-800 mt-auto">
           <div className="max-w-6xl mx-auto px-4 py-8">

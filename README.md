@@ -105,6 +105,17 @@ SOFTWARE.
 
 Built with ❤️ for the open-source community
 
-**Powered by [Autoversio](https://www.autoversio.ai)**
+## About Autoversio
+
+**Autoversio** is a local Swedish provider offering flexible AI deployment options:
+
+- **Semi-Local Transcription & LLM Services**: Cloud-hosted services with data processed in Sweden, combining convenience with privacy compliance
+- **Fully Local On-Premises Solutions**: Complete on-premise deployment with hardware provision for maximum data sovereignty and offline capability
+
+Whether you need semi-local services or fully on-premises deployment with dedicated hardware, Autoversio provides tailored AI solutions for organizations prioritizing data privacy and control.
+
+Learn more: [www.autoversio.ai](https://www.autoversio.ai)
+
+---
 
 **Part of [PRIVAI](https://www.privai.se)** - Private AI solutions for everyone
