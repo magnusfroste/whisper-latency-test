@@ -145,6 +145,19 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
           <div className="w-32" />
         </div>
 
+        {/* Under Development Banner */}
+        <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🚧</span>
+            <div>
+              <h3 className="font-semibold text-yellow-400">Under Utveckling</h3>
+              <p className="text-sm text-gray-400">
+                Denna funktion är under aktiv utveckling. För stabil realtidsupplevelse, använd gärna "Live Transkribering" istället.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Health Status */}
         <div className={`rounded-lg p-3 mb-6 border text-sm ${
           health?.whisper_connected
