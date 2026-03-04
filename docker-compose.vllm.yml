@@ -49,7 +49,6 @@ services:
       --dtype auto
       --enforce-eager
       --max-model-len 448
-      --disable-log-requests
       --trust-remote-code
       --max-num-seqs 8
       --swap-space 4
