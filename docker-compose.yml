@@ -4,21 +4,16 @@ services:
       context: .
       dockerfile: Dockerfile.whisper-vllm
     restart: unless-stopped
+    runtime: nvidia
     ipc: host
     shm_size: '8gb'
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ["0"]
-              capabilities: [gpu]
-    volumes:
-      - /home/ss/.cache/huggingface:/root/.cache/huggingface
     environment:
       - HUGGINGFACE_TOKEN=${HF_TOKEN}
       - CUDA_DEVICE_ORDER=PCI_BUS_ID
       - VLLM_NO_USAGE_STATS=1
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - /home/ss/.cache/huggingface:/root/.cache/huggingface
     ports:
       - "8001:8001"
     command: >
@@ -28,7 +23,6 @@ services:
       --gpu-memory-utilization 0.45
       --max-num-seqs 8
       --swap-space 4
-      --disable-log-requests
       --enforce-eager
 
   whisper-test:
