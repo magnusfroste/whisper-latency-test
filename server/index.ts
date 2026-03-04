@@ -10,7 +10,9 @@ import ffmpeg from 'fluent-ffmpeg'
 
 // Set ffmpeg path
 import ffmpegPath from 'ffmpeg-static'
-ffmpeg.setFfmpegPath(ffmpegPath)
+if (ffmpegPath) {
+  ffmpeg.setFfmpegPath(ffmpegPath)
+}
 
 dotenv.config()
 

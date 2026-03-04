@@ -11,6 +11,6 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["server/**/*"],
+  "include": ["server/**/*", "*.d.ts"],
   "exclude": []
 }
