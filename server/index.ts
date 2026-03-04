@@ -48,12 +48,14 @@ const convertToWav = async (audioBuffer: Buffer): Promise<Buffer> => {
     // Write input file
     fs.writeFileSync(inputPath, audioBuffer)
 
-    // Convert using ffmpeg with correct API
+    // Convert using ffmpeg - use addOutputOptions for audio settings
     await new Promise<void>((resolve, reject) => {
       ffmpeg(inputPath)
-        .withAudioBitrate(128)
-        .withAudioChannels(1)
-        .withAudioFrequency(16000)
+        .addOutputOptions([
+          '-acodec pcm_s16le',  // 16-bit PCM
+          '-ar 16000',          // 16kHz sample rate
+          '-ac 1'               // Mono
+        ])
         .save(outputPath)
         .on('end', () => {
           console.log('[FFmpeg] Konvertering klar')

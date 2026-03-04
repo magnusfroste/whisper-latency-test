@@ -4,6 +4,7 @@ declare module 'fluent-ffmpeg' {
     audioChannels(value: number): FfmpegCommand
     audioFrequency(value: number): FfmpegCommand
     format(value: string): FfmpegCommand
+    addOutputOptions(options: string[]): FfmpegCommand
     save(path: string): FfmpegCommand
     on(event: 'end', callback: () => void): FfmpegCommand
     on(event: 'error', callback: (err: Error) => void): FfmpegCommand
