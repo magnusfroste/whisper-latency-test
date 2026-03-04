@@ -20,8 +20,6 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
   const [health, setHealth] = useState<HealthStatus | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const checkHealth = async () => {
     try {
@@ -39,9 +37,6 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
 
   useEffect(() => {
     checkHealth()
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
   }, [])
 
   const startRecording = async () => {
@@ -51,14 +46,15 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
         mimeType: 'audio/webm;codecs=opus'
       })
 
-      chunksRef.current = []
       setLiveText('')
       setFinalText('')
       setError(null)
 
-      mediaRecorder.ondataavailable = (event) => {
+      // Send transcription on each dataavailable event
+      mediaRecorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
-          chunksRef.current.push(event.data)
+          console.log('[Live] Chunk mottagen:', event.data.size, 'bytes')
+          await sendChunk(event.data)
         }
       }
 
@@ -67,15 +63,11 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
       }
 
       mediaRecorderRef.current = mediaRecorder
-      mediaRecorder.start()
+      // Start with timeslice of 2000ms to get data every 2 seconds
+      mediaRecorder.start(2000)
       setIsRecording(true)
 
-      // Send chunks every 2 seconds for live transcription
-      intervalRef.current = setInterval(async () => {
-        if (chunksRef.current.length > 0) {
-          await sendChunk()
-        }
-      }, 2000)
+      console.log('[Live] Inspeking startad')
     } catch (err) {
       setError('Kunde inte tillgripa mikrofonen.')
       console.error('Microphone error:', err)
@@ -84,28 +76,16 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
 
   const stopRecording = async () => {
     if (mediaRecorderRef.current && isRecording) {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-
       mediaRecorderRef.current.stop()
       setIsRecording(false)
-
-      // Send final chunk
-      if (chunksRef.current.length > 0) {
-        await sendChunk(true)
-      }
+      console.log('[Live] Inspeking stoppad')
     }
   }
 
-  const sendChunk = async (isFinal = false) => {
-    if (chunksRef.current.length === 0) return
-
+  const sendChunk = async (blobData: Blob) => {
     setIsProcessing(true)
-    const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
     const formData = new FormData()
-    formData.append('file', blob, 'recording.webm')
+    formData.append('file', blobData, 'recording.webm')
 
     try {
       const response = await fetch('/api/transcribe', {
@@ -118,16 +98,15 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
       }
 
       const data = await response.json()
+      console.log('[Live] Transkribering:', data.text)
 
-      if (isFinal) {
-        setFinalText(data.text)
-        setLiveText('')
-      } else {
-        setLiveText(data.text)
-      }
-
-      // Clear chunks for next iteration
-      chunksRef.current = []
+      // Append to live text
+      setLiveText(prev => {
+        if (prev && !data.text.startsWith(prev)) {
+          return prev + ' ' + data.text
+        }
+        return data.text
+      })
     } catch (err) {
       setError('Kunde inte transkribera. Kontrollera Whisper-servern.')
       console.error('Transcription error:', err)
