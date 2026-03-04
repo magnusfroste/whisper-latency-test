@@ -20,7 +20,6 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const lastSendTimeRef = useRef<number>(0)
-  const forceRenderRef = useRef<number>(0)
 
   const checkHealth = async () => {
     try {
@@ -109,8 +108,6 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
                 ? prev + ' ' + data.text
                 : data.text
               console.log('[Realtime] Text:', newText.substring(0, 50))
-              // Force re-render by updating a separate state
-              forceRenderRef.current += 1
               return newText
             })
           }
