@@ -69,6 +69,7 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
           console.log('[Live] Sending final chunk:', blob.size, 'bytes')
           sendChunk(blob).then((text) => setFinalText(text || liveText))
         }
+        setIsRecording(false)
       }
 
       mediaRecorderRef.current = mediaRecorder
@@ -95,7 +96,7 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
   }
 
   const stopRecording = async () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
         intervalRef.current = null
@@ -105,6 +106,23 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
       console.log('[Live] Recording stopped')
     }
   }
+
+  // Handle Spacebar toggle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault()
+        if (isRecording) {
+          stopRecording()
+        } else {
+          startRecording()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isRecording])
 
   const sendChunk = async (blobData: Blob) => {
     console.log('[Live] sendChunk started, blob size:', blobData.size)
@@ -178,8 +196,8 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
 
         {/* Health Status */}
         <div className={`rounded-lg p-3 mb-6 border text-sm ${health?.whisper_connected
-            ? 'bg-green-900/30 border-green-700'
-            : 'bg-red-900/30 border-red-700'
+          ? 'bg-green-900/30 border-green-700'
+          : 'bg-red-900/30 border-red-700'
           }`}>
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${health?.whisper_connected ? 'bg-green-500' : 'bg-red-500'
@@ -192,31 +210,21 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
 
         {/* Recording Controls */}
         <div className="flex justify-center mb-8">
-          {!isRecording ? (
-            <button
-              onClick={startRecording}
-              className="
-                w-32 h-32 rounded-full flex items-center justify-center
-                bg-green-600 hover:bg-green-500
-                transition-all duration-200 shadow-lg
-              "
-            >
-              <span className="text-lg font-semibold">Record</span>
-            </button>
-          ) : (
-            <button
-              onClick={stopRecording}
-              className="
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`
                 relative w-32 h-32 rounded-full flex items-center justify-center
-                bg-red-600 hover:bg-red-500
                 transition-all duration-200 shadow-lg
-              "
-            >
-              <span className="absolute inset-0 rounded-full animate-pulse border-4 border-red-500" />
-              <span className="text-lg font-semibold">Stop</span>
-            </button>
-          )}
+                ${isRecording ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'}
+              `}
+          >
+            {isRecording && <span className="absolute inset-0 rounded-full animate-pulse border-4 border-red-500" />}
+            <span className="text-lg font-semibold">{isRecording ? 'Stop' : 'Record'}</span>
+          </button>
         </div>
+        <p className="text-center text-gray-500 text-sm mb-8">
+          Press <kbd className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs font-mono">Space</kbd> to toggle recording
+        </p>
 
         {/* Status indicator */}
         {isRecording && (

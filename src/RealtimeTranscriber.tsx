@@ -85,11 +85,28 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
   }
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
     }
   }
+
+  // Handle Spacebar toggle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault()
+        if (isRecording) {
+          stopRecording()
+        } else {
+          startRecording()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isRecording])
 
   // Send chunks periodically
   useEffect(() => {
@@ -186,23 +203,17 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
         </div>
 
         {/* Recording Control */}
-        <div className="flex justify-center mb-8">
-          {!isRecording ? (
-            <button
-              onClick={startRecording}
-              className="w-32 h-32 rounded-full flex items-center justify-center bg-green-600 hover:bg-green-500 transition-all shadow-lg"
-            >
-              <span className="text-lg font-semibold">Start</span>
-            </button>
-          ) : (
-            <button
-              onClick={stopRecording}
-              className="relative w-32 h-32 rounded-full flex items-center justify-center bg-red-600 hover:bg-red-500 transition-all shadow-lg"
-            >
-              <span className="absolute inset-0 rounded-full animate-pulse border-4 border-red-500" />
-              <span className="text-lg font-semibold">Stop</span>
-            </button>
-          )}
+        <div className="flex flex-col items-center mb-8">
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`w-32 h-32 rounded-full flex items-center justify-center transition-all shadow-lg ${isRecording ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'}`}
+          >
+            {isRecording && <span className="absolute inset-0 rounded-full animate-pulse border-4 border-red-500" />}
+            <span className="text-lg font-semibold">{isRecording ? 'Stop' : 'Start'}</span>
+          </button>
+          <p className="mt-4 text-gray-500 text-sm">
+            Press <kbd className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs font-mono">Space</kbd> to toggle recording
+          </p>
         </div>
 
         {/* Status */}

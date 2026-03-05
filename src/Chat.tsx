@@ -96,6 +96,7 @@ function Chat({ onBack }: { onBack: () => void }) {
         mediaRecorder.onstop = async () => {
           stream.getTracks().forEach(track => track.stop())
           await sendVoiceMessage()
+          setIsRecording(false)
         }
 
         mediaRecorderRef.current = mediaRecorder
@@ -108,6 +109,37 @@ function Chat({ onBack }: { onBack: () => void }) {
       console.error('Microphone error:', err)
     }
   }
+
+  // Handle Spacebar hold-to-talk
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault()
+        if (!isRecording && !isLoading) {
+          toggleRecording() // Start
+        }
+      }
+    }
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.code === 'Space') {
+        e.preventDefault()
+        if (isRecording) {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop()
+            setIsRecording(false)
+          }
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [isRecording, isLoading])
 
   const sendVoiceMessage = async () => {
     if (chunksRef.current.length === 0) return
@@ -374,7 +406,12 @@ function Chat({ onBack }: { onBack: () => void }) {
           </form>
           {isRecording && (
             <p className="text-center text-red-400 text-sm mt-2 animate-pulse">
-              Listening... (click to stop)
+              Listening... (click or release space to stop)
+            </p>
+          )}
+          {!isRecording && (
+            <p className="text-center text-gray-500 text-xs mt-2">
+              Hold <kbd className="px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded text-[10px] font-mono">Space</kbd> to talk
             </p>
           )}
         </div>
