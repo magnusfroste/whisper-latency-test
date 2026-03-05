@@ -19,6 +19,9 @@ const app = express()
 const PORT = process.env.PORT || 3000
 const WHISPER_URL = process.env.WHISPER_URL || 'http://whisper-vllm:8001'
 
+// Parse JSON bodies
+app.use(express.json())
+
 // Serve static files from dist
 app.use(express.static(path.join(__dirname, '../dist')))
 
