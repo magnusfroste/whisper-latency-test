@@ -17,7 +17,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
-const PORT = process.env.PORT || 3000
+const PORT = Number(process.env.PORT) || 3000
 const WHISPER_URL = process.env.WHISPER_URL || 'http://whisper-vllm:8001'
 const ULTRAVOX_URL = process.env.ULTRAVOX_URL || 'http://ultravox-vllm:8002'
 const ULTRAVOX_MODEL_NAME = process.env.ULTRAVOX_MODEL_NAME || 'ultravox'
