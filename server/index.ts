@@ -19,6 +19,7 @@ const __dirname = path.dirname(__filename)
 const app = express()
 const PORT = process.env.PORT || 3000
 const WHISPER_URL = process.env.WHISPER_URL || 'http://whisper-vllm:8001'
+const ULTRAVOX_URL = process.env.ULTRAVOX_URL || 'http://ultravox-vllm:8002'
 
 // Parse JSON bodies
 app.use(express.json())
@@ -290,6 +291,84 @@ app.post('/api/chat', async (req: express.Request, res: express.Response) => {
   }
 })
 
+// Native Multimodal Chat - handles audio directly for Ultravox
+app.post('/api/chat/native', upload.single('file'), async (req: MulterRequest, res: express.Response) => {
+  console.log('[NativeChat] Mottog röstkommando för Ultravox')
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'No audio file provided' })
+  }
+
+  const prompt = (req.body.prompt as string) || "User is speaking."
+  console.log('[NativeChat] Prompt:', prompt)
+
+  try {
+    // Read file
+    const audioBuffer = fs.readFileSync(req.file.path)
+    let finalBuffer: Buffer = audioBuffer
+
+    // Convert to WAV (Ultravox/vLLM expectations)
+    if (req.file.mimetype.includes('webm') || req.file.mimetype.includes('ogg')) {
+      console.log('[NativeChat] Konverterar till WAV för Ultravox...')
+      finalBuffer = await convertToWav(audioBuffer)
+    }
+
+    // Convert to base64
+    const audioBase64 = finalBuffer.toString('base64')
+
+    // Construct multimodal payload
+    const payload = {
+      model: 'ultravox',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            {
+              type: 'audio',
+              input_audio: {
+                data: audioBase64,
+                format: 'wav'
+              }
+            }
+          ]
+        }
+      ],
+      stream: false,
+      max_tokens: 1024
+    }
+
+    const startTime = Date.now()
+    const response = await fetch(`${ULTRAVOX_URL}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    const duration = Date.now() - startTime
+
+    console.log('[NativeChat] Ultravox svarade med status:', response.status, `(${duration}ms)`)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[NativeChat] FEL från Ultravox:', response.status, errorText)
+      throw new Error(`Ultravox API error: ${response.status} - ${errorText}`)
+    }
+
+    const data = await response.json()
+    console.log('[NativeChat] Framgång!')
+    res.json(data)
+  } catch (error) {
+    console.error('[NativeChat] FEL:', error instanceof Error ? error.message : error)
+    res.status(500).json({
+      error: 'Failed to process native multimodal chat',
+      details: error instanceof Error ? error.message : String(error)
+    })
+  } finally {
+    // Cleanup
+    try { fs.unlinkSync(req.file.path) } catch { }
+  }
+})
+
 // Serve index.html for all other routes (SPA support)
 app.get('*', (req: express.Request, res: express.Response) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'))
@@ -298,4 +377,5 @@ app.get('*', (req: express.Request, res: express.Response) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
   console.log(`Whisper URL: ${WHISPER_URL}`)
+  console.log(`Ultravox URL: ${ULTRAVOX_URL}`)
 })

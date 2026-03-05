@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import LiveTranscriber from './LiveTranscriber'
 import RealtimeTranscriber from './RealtimeTranscriber'
+import NativeIntelligence from './NativeIntelligence'
 
 // --- Types ---
 interface Message {
@@ -43,7 +44,7 @@ const STORAGE_KEYS = {
   HISTORY: 'privai_chat_v2_history'
 }
 
-type ViewType = 'chat' | 'live' | 'realtime' | 'landing'
+type ViewType = 'chat' | 'live' | 'realtime' | 'landing' | 'native'
 type PersonalityType = 'standard' | 'sycophant' | 'formal' | 'rude'
 
 const PERSONALITIES: Record<PersonalityType, { name: string, prompt: string | null, icon: any, color: string }> = {
@@ -293,6 +294,7 @@ function App() {
 
           <nav className="space-y-1.5 w-full">
             <NavItem id="chat" label="Intelligence Agent" icon={LayoutDashboard} />
+            <NavItem id="native" label="Native Agent" icon={Cpu} />
             <NavItem id="live" label="Transcribe" icon={Waves} />
             <NavItem id="realtime" label="Realtime WS" icon={History} />
           </nav>
@@ -545,6 +547,7 @@ function App() {
               }}
             />
           )}
+          {view === 'native' && <NativeIntelligence />}
         </div>
       </main>
     </div>
