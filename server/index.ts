@@ -291,30 +291,39 @@ app.post('/api/chat', async (req: express.Request, res: express.Response) => {
   }
 })
 
-// Native Multimodal Chat - handles audio directly for Ultravox
+// Native Multimodal Chat - handles audio OR text for Ultravox
 app.post('/api/chat/native', upload.single('file'), async (req: MulterRequest, res: express.Response) => {
-  console.log('[NativeChat] Mottog röstkommando för Ultravox')
-
-  if (!req.file) {
-    return res.status(400).json({ error: 'No audio file provided' })
-  }
+  console.log('[NativeChat] Request received')
 
   const prompt = (req.body.prompt as string) || "User is speaking."
-  console.log('[NativeChat] Prompt:', prompt)
 
   try {
-    // Read file
-    const audioBuffer = fs.readFileSync(req.file.path)
-    let finalBuffer: Buffer = audioBuffer
+    let content: any[] = [{ type: 'text', text: prompt }]
 
-    // Convert to WAV (Ultravox/vLLM expectations)
-    if (req.file.mimetype.includes('webm') || req.file.mimetype.includes('ogg')) {
-      console.log('[NativeChat] Konverterar till WAV för Ultravox...')
-      finalBuffer = await convertToWav(audioBuffer)
+    if (req.file) {
+      console.log('[NativeChat] Processing audio input...')
+      const audioBuffer = fs.readFileSync(req.file.path)
+      let finalBuffer = audioBuffer as any
+
+      if (req.file.mimetype.includes('webm') || req.file.mimetype.includes('ogg')) {
+        console.log('[NativeChat] Konverterar till WAV för Ultravox...')
+        finalBuffer = await convertToWav(audioBuffer)
+      }
+
+      content.push({
+        type: 'audio',
+        input_audio: {
+          data: (finalBuffer as Buffer).toString('base64'),
+          format: 'wav'
+        }
+      })
+    } else {
+      console.log('[NativeChat] Processing text-only input.')
     }
 
-    // Convert to base64
-    const audioBase64 = finalBuffer.toString('base64')
+    if (!prompt && !req.file) {
+      return res.status(400).json({ error: 'No prompt or audio file provided' })
+    }
 
     // Construct multimodal payload
     const payload = {
@@ -322,16 +331,7 @@ app.post('/api/chat/native', upload.single('file'), async (req: MulterRequest, r
       messages: [
         {
           role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'audio',
-              input_audio: {
-                data: audioBase64,
-                format: 'wav'
-              }
-            }
-          ]
+          content: content
         }
       ],
       stream: false,
@@ -365,7 +365,9 @@ app.post('/api/chat/native', upload.single('file'), async (req: MulterRequest, r
     })
   } finally {
     // Cleanup
-    try { fs.unlinkSync(req.file.path) } catch { }
+    if (req.file) {
+      try { fs.unlinkSync(req.file.path) } catch { }
+    }
   }
 })
 

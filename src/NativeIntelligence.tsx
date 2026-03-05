@@ -120,14 +120,12 @@ export default function NativeIntelligence() {
         setInput('')
 
         try {
-            const response = await fetch('/api/chat', {
+            const formData = new FormData()
+            formData.append('prompt', input)
+
+            const response = await fetch('/api/chat/native', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    apiUrl: 'http://ultravox-vllm:8002/v1', // Target the native model
-                    modelName: 'ultravox',
-                    messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content }))
-                })
+                body: formData
             })
 
             if (!response.ok) throw new Error('Chat API Error')
