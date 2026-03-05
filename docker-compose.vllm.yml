@@ -35,13 +35,14 @@ services:
       - VLLM_ATTENTION_BACKEND=FLASHINFER
       - VLLM_LOGGING_LEVEL=INFO
       - NVIDIA_VISIBLE_DEVICES=0
+      - CUDA_VISIBLE_DEVICES=0
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     ports:
       - "8001:8000"
     ipc: host
     shm_size: '32gb'
     command: >
-      openai/whisper-large-v3 --served-model-name whisper-large-v3 --host 0.0.0.0 --port 8000 --gpu-memory-utilization 0.85 --dtype auto --enforce-eager --max-model-len 448 --trust-remote-code --max-num-seqs 8 --swap-space 4
+      openai/whisper-large-v3 --served-model-name whisper-large-v3 --host 0.0.0.0 --port 8000 --gpu-memory-utilization 0.20 --dtype auto --enforce-eager --max-model-len 448 --trust-remote-code --max-num-seqs 8 --swap-space 4
 
   ultravox-vllm:
     image: vllm/vllm-openai:latest
@@ -61,9 +62,10 @@ services:
       - HF_TOKEN=${HF_TOKEN:-}
       - CUDA_DEVICE_ORDER=PCI_BUS_ID
       - NVIDIA_VISIBLE_DEVICES=1
+      - CUDA_VISIBLE_DEVICES=1
     ports:
       - "8002:8000"
     ipc: host
     shm_size: '32gb'
     command: >
-      fixie-ai/ultravox-v0_5-llama-3_1-8b --served-model-name ultravox --host 0.0.0.0 --port 8000 --gpu-memory-utilization 0.90 --dtype bfloat16 --enforce-eager --max-model-len 4096 --trust-remote-code --limit-mm-per-prompt '{"audio":1}'
+      fixie-ai/ultravox-v0_5-llama-3_1-8b --served-model-name ultravox --host 0.0.0.0 --port 8000 --gpu-memory-utilization 0.60 --dtype bfloat16 --enforce-eager --max-model-len 4096 --trust-remote-code --limit-mm-per-prompt '{"audio":1}'
