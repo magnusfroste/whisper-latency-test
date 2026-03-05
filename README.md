@@ -1,28 +1,30 @@
-# Whisper Latency Test
+# Private Whisper Agent
 
-A benchmarking application for comparing local private AI models against closed paid models. This project focuses on measuring latency and performance of Whisper speech-to-text models running locally versus cloud-based alternatives.
+A privacy-first Whisper speech-to-text and agentic chat test platform. Compare different models and settings to optimize response times and user experience.
 
 ## Project Goal
 
-The primary objective of this project is to benchmark local private models against closed paid models, evaluating:
-- **Latency**: Response times for speech-to-text transcription
-- **Privacy**: Ensuring all audio processing happens locally without data leaving your environment
-- **Accuracy**: Comparing transcription quality between different models
-- **Cost**: Evaluating the economic benefits of self-hosted solutions
+This platform enables benchmarking and testing of local private AI models against various configurations, focusing on:
+- **Privacy**: All audio processing happens locally - no data leaves your environment
+- **Model Comparison**: Test different Whisper models and LLM configurations
+- **Performance Optimization**: Measure and optimize latency and response quality
+- **Agentic Chat**: Integrated voice-to-chat workflow with configurable backends
 
 ## Features
 
-- **Push-to-Talk**: Simple press-and-hold interface for instant transcription
-- **Live Transcription**: Continuous transcription while recording
-- **Real-time Transcription**: Near real-time updates (under development)
+- **Push-to-Talk Transcription**: Simple press-and-hold interface for instant speech-to-text
+- **Live Transcription**: Continuous real-time transcription while recording
+- **Real-time Transcription**: Near real-time streaming updates (under development)
+- **Agentic Chat**: Voice-enabled chat that transcribes audio and sends to configurable LLM backends
 - **Privacy First**: All audio processing happens locally - no data sent to third parties
-- **Performance Metrics**: Detailed latency measurements for each transcription
+- **Performance Metrics**: Detailed latency measurements for each operation
+- **Configurable Backends**: Easily swap between different Whisper and LLM endpoints
 
 ## Tech Stack
 
 - **Frontend**: React with TypeScript
 - **Backend**: Node.js with Express
-- **Speech-to-Text**: OpenAI Whisper (self-hosted)
+- **Speech-to-Text**: OpenAI Whisper (self-hosted via vLLM)
 - **Audio Processing**: FFmpeg for format conversion
 - **Deployment**: Docker with EasyPanel
 
@@ -38,8 +40,8 @@ The primary objective of this project is to benchmark local private models again
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/magnusfroste/whisper-latency-test.git
-cd whisper-latency-test
+git clone https://github.com/magnusfroste/private-whisper-agent.git
+cd private-whisper-agent
 ```
 
 2. Install dependencies:
@@ -61,11 +63,42 @@ npm run dev
 
 ## Usage
 
-1. Open the application in your browser
-2. Click "Get Started" on the landing page
-3. Press and hold the microphone button while speaking
-4. Release to see the transcription and latency metrics
-5. Compare results across different modes and configurations
+### Transcription Modes
+
+1. **Push-to-Talk**: Hold the microphone button while speaking, release to transcribe
+2. **Live Transcription**: Continuous transcription as you speak
+3. **Realtime**: Streaming transcription with near real-time updates
+
+### Agentic Chat
+
+The chat feature combines voice transcription with LLM responses:
+
+1. Click "Chat" to open the chat interface
+2. Configure your backend settings (API URL and model name)
+3. Use the microphone button to speak - your voice is transcribed and sent to the LLM
+4. Or type messages directly
+5. Receive responses from your configured model
+
+The chat supports:
+- Voice input (record → transcribe → send to LLM)
+- Text input
+- Configurable API endpoints and model names
+- Session clearing
+
+## Architecture
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+│   Client    │────▶│   Server     │────▶│  Whisper/vLLM   │
+│  (React)    │     │  (Express)   │     │  Transcription  │
+└─────────────┘     └──────────────┘     └─────────────────┘
+                               │
+                               ▼
+                      ┌─────────────────┐
+                      │   LLM Backend   │
+                      │ (Qwen, etc.)    │
+                      └─────────────────┘
+```
 
 ## Benchmarking
 
@@ -74,6 +107,28 @@ To run benchmarks:
 2. Record latency measurements
 3. Evaluate transcription accuracy manually
 4. Compare costs between self-hosted and cloud solutions
+5. Test different model configurations for optimal performance
+
+## Docker Deployment
+
+The project includes Docker configurations for easy deployment:
+
+```bash
+# Using docker-compose with Whisper + vLLM
+docker-compose -f docker-compose.vllm.yml up -d
+
+# Or use the main docker-compose
+docker-compose up -d
+```
+
+## Environment Variables
+
+Configure the following in your `.env` file:
+
+- `PORT`: Server port (default: 3000)
+- `WHISPER_URL`: Whisper/vLLM endpoint URL
+- `VITE_CHAT_API_URL`: Default LLM API endpoint for chat
+- `VITE_CHAT_MODEL_NAME`: Default model name for chat
 
 ## License
 
