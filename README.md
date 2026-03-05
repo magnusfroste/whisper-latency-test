@@ -1,6 +1,22 @@
 # Private Whisper Agent
 
+<div align="center">
+
+🔒 **Privacy-First** | 🎙️ **Speech-to-Text** | 💬 **Agentic Chat** | ⚡ **Fast & Local**
+
+---
+
 A privacy-first Whisper speech-to-text and agentic chat test platform. Compare different models and settings to optimize response times and user experience.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![React](https://img.shields.io/badge/React-18-20232a?style=flat&logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com)
+
+---
+
+</div>
 
 ## Project Goal
 
