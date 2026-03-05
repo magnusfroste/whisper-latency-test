@@ -1,7 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
+import {
+  Mic,
+  Trash2,
+  Copy,
+  X,
+  Plus,
+  History,
+  MessageSquare
+} from 'lucide-react'
 
 interface RealtimeTranscriberProps {
-  onBack: () => void
+  onBack?: () => void
+  onSendToChat?: (text: string) => void
 }
 
 interface HealthStatus {
@@ -11,7 +21,7 @@ interface HealthStatus {
   error?: string
 }
 
-export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps) {
+export default function RealtimeTranscriber({ onSendToChat }: RealtimeTranscriberProps) {
   const [isRecording, setIsRecording] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [transcribedText, setTranscribedText] = useState('')
@@ -20,7 +30,6 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
-  const isProcessingRef = useRef(false) // Use ref for mutable access in async callbacks
 
   const checkHealth = async () => {
     try {
@@ -40,19 +49,19 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
     checkHealth()
   }, [])
 
-  // Force re-render when transcribedText changes
+  // Handle Spacebar toggle
   useEffect(() => {
-    console.log('[Realtime] Re-render triggered, text:', transcribedText.substring(0, 50))
-  }, [transcribedText])
-
-  // Track processing state for UI
-  const [isProcessingUI, setIsProcessingUI] = useState(false)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsProcessingUI(isProcessingRef.current)
-    }, 100)
-    return () => clearInterval(interval)
-  }, [])
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault()
+        if (isRecording) stopRecording()
+        else startRecording()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isRecording])
 
   const startRecording = async () => {
     try {
@@ -61,11 +70,11 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
         mimeType: 'audio/webm;codecs=opus'
       })
 
+      chunksRef.current = []
       setTranscribedText('')
       setError(null)
 
-      // Send each chunk directly when available (no merging!)
-      mediaRecorder.ondataavailable = async (event) => {
+      mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunksRef.current.push(event.data)
         }
@@ -76,11 +85,10 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
       }
 
       mediaRecorderRef.current = mediaRecorder
-      mediaRecorder.start(200) // Get chunks quickly so they accumulate
+      mediaRecorder.start(200)
       setIsRecording(true)
     } catch (err) {
       setError('Could not access microphone.')
-      console.error('Microphone error:', err)
     }
   }
 
@@ -91,72 +99,42 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
     }
   }
 
-  // Handle Spacebar toggle
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.code === 'Space' && !e.repeat) {
-        e.preventDefault()
-        if (isRecording) {
-          stopRecording()
-        } else {
-          startRecording()
-        }
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isRecording])
-
   // Send chunks periodically
   useEffect(() => {
     if (!isRecording) return
 
     const interval = setInterval(async () => {
-      // Skip if already processing to avoid queue buildup
-      if (isProcessing) {
-        console.log('[Realtime] Skipping - already processing')
-        return
-      }
-
+      if (isProcessing) return
       if (chunksRef.current.length > 0) {
         setIsProcessing(true)
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        // We DO NOT clear chunksRef.current = [] here!
-        // We accumulate the audio and send it continuously.
-
         try {
           const formData = new FormData()
           formData.append('file', blob, 'recording.webm')
-
-          const response = await fetch('/api/transcribe', {
-            method: 'POST',
-            body: formData
-          })
-
+          const response = await fetch('/api/transcribe', { method: 'POST', body: formData })
           if (response.ok) {
             const data = await response.json()
-            if (data.text) {
-              setTranscribedText(data.text)
-              console.log('[Realtime] Text updated:', data.text.substring(0, 50))
-            }
-          } else {
-            console.warn('[Realtime] Transcription failed:', response.status)
+            if (data.text) setTranscribedText(data.text)
           }
         } catch (err) {
-          console.warn('[Realtime] Transcription error:', err)
+          console.warn('[Realtime] Error:', err)
         } finally {
           setIsProcessing(false)
         }
       }
-    }, 3000) // Send accumulated audio every 3 seconds
+    }, 2000)
 
     return () => clearInterval(interval)
   }, [isRecording, isProcessing])
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(transcribedText)
-    alert('Text copied!')
+  }
+
+  const handleSendToChat = () => {
+    if (transcribedText && onSendToChat) {
+      onSendToChat(transcribedText)
+    }
   }
 
   const clearText = () => {
@@ -164,113 +142,114 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-gray-400 hover:text-white"
-          >
-            ← Back
-          </button>
-          <h1 className="text-2xl font-bold">Realtime Transcription</h1>
-          <div className="w-32" />
+    <div className="flex-1 flex flex-col bg-black text-white h-full overflow-hidden">
+      {/* Header */}
+      <header className="flex items-center justify-between px-8 py-6 glass-header sticky top-0 z-10">
+        <div className="flex items-center gap-4">
+          <History className="w-6 h-6 text-purple-500" />
+          <h2 className="text-xl font-black tracking-tight uppercase tracking-tighter">Realtime WS</h2>
         </div>
-
-        {/* Under Development Banner */}
-        <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">ℹ️</span>
-            <div>
-              <h3 className="font-semibold text-yellow-400">Information</h3>
-              <p className="text-sm text-gray-400">
-                Whisper does not natively support real-time transcription. The goal is to achieve semi-real-time feedback where you receive updates on your speech during recording. This will happen in chunks as audio is collected.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Health Status */}
-        <div className={`rounded-lg p-3 mb-6 border text-sm ${health?.whisper_connected
-          ? 'bg-green-900/30 border-green-700'
-          : 'bg-red-900/30 border-red-700'
-          }`}>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${health?.whisper_connected ? 'bg-green-500' : 'bg-red-500'
-              }`} />
-            <span>Whisper: {health?.whisper_connected ? 'Connected' : 'Disconnected'}</span>
-          </div>
-        </div>
-
-        {/* Recording Control */}
-        <div className="flex flex-col items-center mb-8">
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            className={`w-32 h-32 rounded-full flex items-center justify-center transition-all shadow-lg ${isRecording ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'}`}
-          >
-            {isRecording && <span className="absolute inset-0 rounded-full animate-pulse border-4 border-red-500" />}
-            <span className="text-lg font-semibold">{isRecording ? 'Stop' : 'Start'}</span>
-          </button>
-          <p className="mt-4 text-gray-500 text-sm">
-            Press <kbd className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs font-mono">Space</kbd> to toggle recording
-          </p>
-        </div>
-
-        {/* Status */}
-        {isRecording && (
-          <div className="text-center mb-4">
-            <span className="inline-flex items-center gap-2 text-red-400">
-              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              Recording... ({isProcessingUI ? 'Sending & processing...' : 'Collecting audio'})
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#161616] border border-gray-800 rounded-full">
+            <div className={`w-1.5 h-1.5 rounded-full ${health?.whisper_connected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-nowrap">
+              WS Link: {health?.whisper_connected ? 'Active' : 'Offline'}
             </span>
           </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 mb-6 text-center">
-            {error}
-          </div>
-        )}
-
-        {/* Text Display */}
-        {transcribedText && (
-          <div className="mb-6">
-            <div className="flex gap-2 mb-3">
-              <button
-                onClick={copyToClipboard}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm"
-              >
-                Copy
-              </button>
-              <button
-                onClick={clearText}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm"
-              >
-                Clear
-              </button>
-            </div>
-            <textarea
-              readOnly
-              className="w-full bg-gray-800 rounded-lg p-4 border border-gray-700 text-lg leading-relaxed text-white resize-none"
-              rows={6}
-              value={transcribedText}
-            />
-          </div>
-        )}
-
-        {/* Instructions */}
-        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <h3 className="font-semibold mb-2">How it works:</h3>
-          <ul className="text-sm text-gray-400 space-y-1">
-            <li>• Click "Start" to begin transcribing</li>
-            <li>• Audio is streamed continuously to Whisper</li>
-            <li>• The entire phrase updates smoothly to fix mistakes</li>
-            <li>• Click "Stop" when you are done</li>
-            <li>• Copy or clear the text</li>
-          </ul>
+          <button onClick={clearText} className="p-2 text-gray-500 hover:text-red-400 transition-colors">
+            <Trash2 className="w-5 h-5" />
+          </button>
         </div>
-      </div>
+      </header>
+
+      {/* Content */}
+      <main className="flex-1 overflow-y-auto custom-scrollbar px-6 sm:px-20 py-10">
+        <div className="max-w-4xl mx-auto space-y-10">
+
+          <div className="flex flex-col items-center justify-center py-10">
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`
+                 w-40 h-40 rounded-full flex flex-col items-center justify-center transition-all duration-500 relative
+                 ${isRecording
+                  ? 'bg-purple-600 shadow-[0_0_50px_rgba(147,51,234,0.3)] animate-pulse'
+                  : 'bg-[#1d9bf0] shadow-[0_0_30px_rgba(29,155,240,0.1)] hover:scale-105'
+                }
+               `}
+            >
+              {isRecording ? (
+                <>
+                  <X className="w-10 h-10 mb-2" />
+                  <span className="text-xs font-black uppercase tracking-widest">End WS</span>
+                </>
+              ) : (
+                <>
+                  <Mic className="w-10 h-10 mb-2" />
+                  <span className="text-xs font-black uppercase tracking-widest">Connect</span>
+                </>
+              )}
+              {isRecording && (
+                <span className="absolute -inset-4 rounded-full border-2 border-purple-500/20 animate-ping" />
+              )}
+            </button>
+            <p className="mt-8 text-gray-500 text-[11px] font-bold uppercase tracking-[0.2em]">
+              Press <kbd className="px-2 py-1 bg-[#161616] border border-gray-800 rounded mx-1 text-white">Space</kbd> to toggle WS stream
+            </p>
+          </div>
+
+          {transcribedText ? (
+            <div className="space-y-6 animate-slide-up">
+              <div className="bg-[#0b0b0b] border border-gray-800 rounded-[2.5rem] p-8 sm:p-12 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
+
+                <div className="flex items-center justify-between mb-6">
+                  <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Realtime Stream</span>
+                  {isProcessing && (
+                    <span className="flex items-center gap-2 text-purple-500 text-[10px] font-black uppercase">
+                      <Plus className="w-3 h-3 animate-spin" /> Syncing with Node
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-xl sm:text-2xl leading-relaxed font-medium text-white">
+                  {transcribedText}
+                  {isRecording && <span className="inline-block w-1 h-6 bg-purple-500 ml-1 animate-pulse align-middle" />}
+                </p>
+
+                <div className="mt-12 flex flex-wrap gap-3">
+                  <button
+                    onClick={copyToClipboard}
+                    className="flex items-center gap-2 px-6 py-3 bg-[#161616] hover:bg-gray-800 border border-gray-800 rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover:translate-y-[-2px]"
+                  >
+                    <Copy className="w-4 h-4" /> Copy
+                  </button>
+                  <button
+                    onClick={handleSendToChat}
+                    className="flex items-center gap-2 px-6 py-3 bg-white text-black hover:bg-gray-200 rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover:translate-y-[-2px] shadow-xl"
+                  >
+                    <MessageSquare className="w-4 h-4" /> Send to Chat
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-20">
+              <div className="w-16 h-16 bg-[#161616] border border-gray-800 rounded-3xl flex items-center justify-center mx-auto mb-6 text-gray-500">
+                <History className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-400">WS Pipeline Ready</h3>
+              <p className="text-gray-600 text-sm max-w-xs mx-auto mt-2">Continuous low-latency transcription stream directly to your private AI node.</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-6 rounded-[2rem] text-center animate-slide-up">
+              {error}
+            </div>
+          )}
+
+        </div>
+      </main>
     </div>
   )
 }

@@ -4,7 +4,6 @@ import remarkGfm from 'remark-gfm'
 import {
   Mic,
   Send,
-  Settings,
   Trash2,
   ArrowLeft,
   History,
@@ -54,9 +53,8 @@ function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showConfig, setShowConfig] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [config, setConfig] = useState<ChatConfig>(() => {
+  const [config] = useState<ChatConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CONFIG)
     return saved ? JSON.parse(saved) : {
       apiUrl: (import.meta as any).env?.VITE_CHAT_API_URL || 'http://192.168.68.107:8000/v1',
@@ -87,11 +85,9 @@ function App() {
   // --- Spacebar Logic (Global) ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if typing in a field, UNLESS it's the main chat input being controlled via Space for voice
       if ((e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) && e.target !== inputRef.current) return
 
       if (e.code === 'Space' && !e.repeat) {
-        // Only prevent default if we transition to recording OR we're already recording
         if (view === 'chat' && !isLoading) {
           e.preventDefault()
           if (!isRecording) startRecording()
@@ -138,7 +134,6 @@ function App() {
       setIsRecording(true)
     } catch (err) {
       setError('Microphone access denied.')
-      console.error(err)
     }
   }
 
@@ -152,7 +147,7 @@ function App() {
   const processVoice = async () => {
     if (chunksRef.current.length === 0) return
     const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-    if (blob.size < 500) return // Skip tiny clicks
+    if (blob.size < 500) return
 
     setIsLoading(true)
     const formData = new FormData()
@@ -263,16 +258,6 @@ function App() {
             </div>
           </div>
         </div>
-
-        <div className="mt-auto p-6 border-t border-gray-800">
-          <button
-            onClick={() => setShowConfig(true)}
-            className="w-full flex items-center justify-center gap-2 bg-[#161616] hover:bg-gray-800 border border-gray-800 py-3 rounded-2xl text-sm font-bold transition-all"
-          >
-            <Settings className="w-4 h-4" />
-            Config
-          </button>
-        </div>
       </aside>
 
       {/* --- Main Content --- */}
@@ -295,11 +280,11 @@ function App() {
               {/* Header */}
               <header className="flex items-center justify-between px-8 py-6 glass-header sticky top-0 z-10">
                 <div className="flex items-center gap-4">
-                  <h2 className="text-xl font-black tracking-tight uppercase tracking-tighter">Private AI Chat</h2>
+                  <h2 className="text-xl font-black tracking-tight uppercase">Private AI Chat</h2>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setMessages([])} className="p-2 text-gray-500 hover:text-red-400"><Trash2 className="w-5 h-5" /></button>
-                  <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 text-gray-500 hover:text-white"><MoreVertical className="w-5 h-5" /></button>
+                  <button onClick={() => setMessages([])} className="p-2 text-gray-500 hover:text-red-400 transition-colors"><Trash2 className="w-5 h-5" /></button>
+                  <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 text-gray-500 hover:text-white transition-colors"><MoreVertical className="w-5 h-5" /></button>
                 </div>
               </header>
 
@@ -415,54 +400,21 @@ function App() {
           {view === 'live' && (
             <LiveTranscriber
               onSendToChat={(text: string) => {
-                setView('chat');
-                sendMessage(text);
+                setView('chat')
+                sendMessage(text)
               }}
             />
           )}
-          {view === 'realtime' && <RealtimeTranscriber onBack={() => setView('chat')} />}
+          {view === 'realtime' && (
+            <RealtimeTranscriber
+              onSendToChat={(text: string) => {
+                setView('chat')
+                sendMessage(text)
+              }}
+            />
+          )}
         </div>
       </main>
-
-      {/* --- Config Modal --- */}
-      {showConfig && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in transition-all">
-          <div className="bg-[#0b0b0b] border border-gray-800 rounded-[2.5rem] p-8 max-w-lg w-full shadow-2xl animate-slide-up">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-black italic tracking-tighter">NODE SETTINGS</h3>
-              <button onClick={() => setShowConfig(false)} className="p-2 text-gray-500 hover:text-white bg-gray-900 rounded-full transition-all">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 ml-1 tracking-widest uppercase">Intelligence Base (vLLM URL)</label>
-                <input
-                  className="w-full bg-black border border-gray-800 rounded-2xl px-5 py-3 outline-none focus:border-blue-500 transition-all font-mono text-sm"
-                  value={config.apiUrl}
-                  onChange={(e) => setConfig({ ...config, apiUrl: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 ml-1 tracking-widest uppercase">Model Identity</label>
-                <input
-                  className="w-full bg-black border border-gray-800 rounded-2xl px-5 py-3 outline-none focus:border-blue-500 transition-all font-mono text-sm"
-                  value={config.modelName}
-                  onChange={(e) => setConfig({ ...config, modelName: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowConfig(false)}
-              className="w-full mt-8 bg-white text-black py-4 rounded-2xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all"
-            >
-              Apply Changes
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
