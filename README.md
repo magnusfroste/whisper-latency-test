@@ -190,3 +190,21 @@ Learn more: [www.autoversio.ai](https://www.autoversio.ai)
 ---
 
 **Part of [PRIVAI](https://www.privai.se)** - Private AI solutions for everyone
+
+---
+
+<p align="center">
+  <a href="https://github.com/magnusfroste/private-whisper-agent">
+    <img src="https://img.shields.io/github/stars/magnusfroste/private-whisper-agent.svg?style=social&label=Star&maxAge=2592000" alt="GitHub stars">
+  </a>
+  <a href="https://github.com/magnusfroste/private-whisper-agent/network">
+    <img src="https://img.shields.io/github/forks/magnusfroste/private-whisper-agent.svg?style=social&label=Fork&maxAge=2592000" alt="GitHub forks">
+  </a>
+  <a href="https://github.com/magnusfroste/private-whisper-agent/graphs/contributors">
+    <img src="https://img.shields.io/github/contributors/magnusfroste/private-whisper-agent.svg" alt="GitHub contributors">
+  </a>
+</p>
+
+<p align="center">
+  <strong>© 2024 Magnus Froste. Built with ❤️ for the open-source community.</strong>
+</p>
