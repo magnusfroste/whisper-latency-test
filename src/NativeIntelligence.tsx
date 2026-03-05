@@ -31,6 +31,7 @@ export default function NativeIntelligence() {
     const [health, setHealth] = useState<{ ultravox_connected: boolean } | null>(null)
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLTextAreaElement>(null)
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const chunksRef = useRef<Blob[]>([])
 
@@ -53,6 +54,36 @@ export default function NativeIntelligence() {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages])
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't trigger if typing in a different input (though this is the main one)
+            if (e.target instanceof HTMLInputElement || (e.target instanceof HTMLTextAreaElement && e.target !== inputRef.current)) return
+
+            // If in our textarea, only trigger if it's NOT focused or if we want specific behavior
+            // Usually, we want space to work as a shortcut only when NOT typing a message
+            if (e.target === inputRef.current) return
+
+            if (e.code === 'Space' && !e.repeat && !isLoading) {
+                e.preventDefault()
+                if (!isRecording) startRecording()
+            }
+        }
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space' && isRecording) {
+                e.preventDefault()
+                stopRecording()
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        window.addEventListener('keyup', handleKeyUp)
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown)
+            window.removeEventListener('keyup', handleKeyUp)
+        }
+    }, [isRecording, isLoading])
 
     const startRecording = async () => {
         try {
@@ -236,6 +267,7 @@ export default function NativeIntelligence() {
                         className="relative flex items-end gap-3 bg-[#0b0b0b] border border-gray-800 group-focus-within:border-purple-500/50 group-focus-within:bg-[#080808] focus-within:ring-4 focus-within:ring-purple-500/5 rounded-[2.5rem] p-3 pl-6 shadow-2xl transition-all"
                     >
                         <textarea
+                            ref={inputRef}
                             className="flex-1 bg-transparent border-none outline-none py-3 text-[16px] resize-none max-h-48 overflow-y-auto text-white placeholder-gray-600 font-medium"
                             placeholder="Talk natively to the agent..."
                             rows={1}
