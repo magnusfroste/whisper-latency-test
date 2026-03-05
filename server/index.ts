@@ -17,10 +17,13 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
-const PORT = process.env.PORT || 3000
 const WHISPER_URL = process.env.WHISPER_URL || 'http://whisper-vllm:8001'
 const ULTRAVOX_URL = process.env.ULTRAVOX_URL || 'http://ultravox-vllm:8002'
 const ULTRAVOX_MODEL_NAME = process.env.ULTRAVOX_MODEL_NAME || 'ultravox'
+
+console.log('[Config] WHISPER_URL:', WHISPER_URL)
+console.log('[Config] ULTRAVOX_URL:', ULTRAVOX_URL)
+console.log('[Config] ULTRAVOX_MODEL_NAME:', ULTRAVOX_MODEL_NAME)
 
 // Parse JSON bodies
 app.use(express.json())
@@ -198,51 +201,31 @@ app.post('/api/transcribe', upload.single('file'), async (req: MulterRequest, re
   }
 })
 
-// Health check endpoint - testar anslutning till Whisper
+// Health check endpoint - testar anslutning till Whisper och Ultravox
 app.get('/api/health', async (req: express.Request, res: express.Response) => {
-  console.log('[Health] Checkar Whisper anslutning:', WHISPER_URL)
+  console.log('[Health] Checkar anslutningar...')
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 5000)
-
-  try {
-    const startTime = Date.now()
-    const response = await fetch(`${WHISPER_URL}/v1/models`, {
-      method: 'GET',
-      signal: controller.signal
-    })
-    clearTimeout(timeoutId)
-    const duration = Date.now() - startTime
-
-    if (response.ok) {
-      const models = await response.json()
-      console.log('[Health] OK! Whisper svarade på', duration, 'ms')
-      return res.json({
-        status: 'healthy',
-        whisper_url: WHISPER_URL,
-        whisper_connected: true,
-        whisper_latency_ms: duration,
-        models: models.data?.map((m: any) => m.id) || []
-      })
-    } else {
-      console.error('[Health] Whisper svarade med status:', response.status)
-      return res.status(503).json({
-        status: 'unhealthy',
-        whisper_url: WHISPER_URL,
-        whisper_connected: false,
-        error: `Whisper responded with status ${response.status}`
-      })
+  const checkService = async (url: string, timeout = 5000) => {
+    const controller = new AbortController()
+    const id = setTimeout(() => controller.abort(), timeout)
+    try {
+      const resp = await fetch(`${url}/v1/models`, { signal: controller.signal })
+      clearTimeout(id)
+      return resp.ok
+    } catch (e) {
+      clearTimeout(id)
+      return false
     }
-  } catch (error) {
-    clearTimeout(timeoutId)
-    console.error('[Health] KUNDE INTE nå Whisper:', error instanceof Error ? error.message : error)
-    return res.status(503).json({
-      status: 'unhealthy',
-      whisper_url: WHISPER_URL,
-      whisper_connected: false,
-      error: error instanceof Error ? error.message : 'Kunde inte nå Whisper-servern'
-    })
   }
+
+  const whisperOk = await checkService(WHISPER_URL)
+  const ultravoxOk = await checkService(ULTRAVOX_URL)
+
+  res.json({
+    status: whisperOk && ultravoxOk ? 'healthy' : 'degraded',
+    whisper: { url: WHISPER_URL, connected: whisperOk },
+    ultravox: { url: ULTRAVOX_URL, connected: ultravoxOk }
+  })
 })
 
 // Proxy endpoint för chat - skickar vidare till vllm
