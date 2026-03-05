@@ -14,6 +14,7 @@ function Chat({ onBack }: { onBack: () => void }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [config, setConfig] = useState<ChatConfig>({
     apiUrl: (import.meta as any).env?.VITE_CHAT_API_URL || 'http://192.168.68.107:8000/v1',
@@ -21,6 +22,8 @@ function Chat({ onBack }: { onBack: () => void }) {
   })
   const [showConfig, setShowConfig] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -30,12 +33,78 @@ function Chat({ onBack }: { onBack: () => void }) {
     scrollToBottom()
   }, [messages])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
+  // Microphone recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      })
 
-    const userMessage: Message = { role: 'user', content: input }
-    setMessages(prev => [...prev, userMessage])
+      chunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop())
+        await sendVoiceMessage()
+      }
+
+      mediaRecorderRef.current = mediaRecorder
+      mediaRecorder.start()
+      setIsRecording(true)
+      setError(null)
+    } catch (err) {
+      setError('Kunde inte tillgå mikrofon. Se till att du ger tillstånd.')
+      console.error('Microphone error:', err)
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+    }
+  }
+
+  const sendVoiceMessage = async () => {
+    if (chunksRef.current.length === 0) return
+
+    const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+    const formData = new FormData()
+    formData.append('file', blob, 'recording.webm')
+
+    try {
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error('Transkribering misslyckades')
+      }
+
+      const data = await response.json()
+      const transcribedText = data.text
+
+      // Add transcribed message to chat
+      const userMessage: Message = { role: 'user', content: transcribedText }
+      setMessages(prev => [...prev, userMessage])
+
+      // Send to chat model
+      await sendMessage(transcribedText)
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Okänt fel'
+      setError(errorMsg)
+    }
+  }
+
+  const sendMessage = async (text: string) => {
+    const userMessage: Message = { role: 'user', content: text }
     setInput('')
     setIsLoading(true)
     setError(null)
@@ -75,6 +144,13 @@ function Chat({ onBack }: { onBack: () => void }) {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || isLoading) return
+
+    await sendMessage(input)
   }
 
   const clearChat = () => {
@@ -198,7 +274,33 @@ function Chat({ onBack }: { onBack: () => void }) {
       {/* Input */}
       <div className="bg-gray-800 border-t border-gray-700 p-4">
         <div className="max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit} className="flex gap-3">
+          <form onSubmit={handleSubmit} className="flex gap-3 items-center">
+            {/* Voice Recording Button */}
+            <button
+              type="button"
+              onMouseDown={startRecording}
+              onMouseUp={stopRecording}
+              onMouseLeave={() => isRecording && stopRecording()}
+              onTouchStart={startRecording}
+              onTouchEnd={stopRecording}
+              className={`
+                w-12 h-12 rounded-full flex items-center justify-center transition-all
+                ${isRecording
+                  ? 'bg-red-600 animate-pulse'
+                  : 'bg-gray-700 hover:bg-gray-600'
+                }
+              `}
+              title="Håll inne för att prata"
+            >
+              {isRecording ? (
+                <div className="w-3 h-3 bg-white rounded" />
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              )}
+            </button>
+
             <input
               type="text"
               value={input}
@@ -221,6 +323,11 @@ function Chat({ onBack }: { onBack: () => void }) {
               Skicka
             </button>
           </form>
+          {isRecording && (
+            <p className="text-center text-red-400 text-sm mt-2 animate-pulse">
+              Lyssnar... (släpp för att skicka)
+            </p>
+          )}
         </div>
       </div>
     </div>
