@@ -11,7 +11,12 @@ interface ChatConfig {
 }
 
 function Chat({ onBack }: { onBack: () => void }) {
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: 'assistant',
+      content: 'Welcome to this completely private chat! Both text and audio transcription data storage happens on a local server. The AI model is an open-source model whose agentic profile can be customized!'
+    }
+  ])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
