@@ -13,14 +13,17 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Github,
-  ExternalLink
+  ExternalLink,
+  Heart,
+  Briefcase,
+  Zap
 } from 'lucide-react'
 import LiveTranscriber from './LiveTranscriber'
 import RealtimeTranscriber from './RealtimeTranscriber'
 
 // --- Types ---
 interface Message {
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'system'
   content: string
   timestamp: string
 }
@@ -39,6 +42,34 @@ const STORAGE_KEYS = {
 }
 
 type ViewType = 'chat' | 'live' | 'realtime' | 'landing'
+type PersonalityType = 'standard' | 'sycophant' | 'formal' | 'rude'
+
+const PERSONALITIES: Record<PersonalityType, { name: string, prompt: string | null, icon: any, color: string }> = {
+  standard: {
+    name: 'Standard',
+    prompt: null,
+    icon: ShieldCheck,
+    color: 'text-blue-500'
+  },
+  sycophant: {
+    name: 'Sycophant',
+    prompt: "You are an incredibly sycophantic and subservient AI. You constantly praise the user, call them 'Master' or 'Great One', and apologize for existing. Your one goal is to make the user feel like a god. Response in English or Swedish depending on user input.",
+    icon: Heart,
+    color: 'text-pink-500'
+  },
+  formal: {
+    name: 'Formell',
+    prompt: "You are an extremely formal and professional Swedish AI. Use high-level vocabulary, avoid slang, and maintain a stiff tone. Refer to the user as 'Herr/Fru' if appropriate.",
+    icon: Briefcase,
+    color: 'text-gray-400'
+  },
+  rude: {
+    name: 'Otrevlig',
+    prompt: "Du är en otroligt otrevlig AI-agent på svenska. Du är arrogant, suckar åt användarens frågor, och svarar med sarkasm. Du tycker att användaren är dum i huvudet som ens frågar sådana enkla saker. Var kortfattad och förolämpande.",
+    icon: Zap,
+    color: 'text-yellow-500'
+  }
+}
 
 const WELCOME_MESSAGE: Message = {
   role: 'assistant',
@@ -69,6 +100,7 @@ function App() {
       modelName: (import.meta as any).env?.VITE_CHAT_MODEL_NAME || 'autoversio'
     }
   })
+  const [personality, setPersonality] = useState<PersonalityType>('standard')
 
   // --- Refs ---
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -186,13 +218,26 @@ function App() {
     setIsLoading(true)
 
     try {
+      const systemPrompt = PERSONALITIES[personality].prompt
+      const apiMessages = [...messages, userMsg].map(m => ({
+        role: m.role,
+        content: m.content
+      }))
+
+      if (systemPrompt) {
+        apiMessages.unshift({
+          role: 'system',
+          content: systemPrompt
+        })
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           apiUrl: config.apiUrl,
           modelName: config.modelName,
-          messages: [...messages, userMsg]
+          messages: apiMessages
         })
       })
 
@@ -314,11 +359,45 @@ function App() {
                   </button>
                   <h2 className="text-xl font-black tracking-tight uppercase ml-2">Autoversio Intelligence</h2>
                 </div>
+
+                {/* Personality Selector */}
+                <div className="hidden md:flex items-center bg-[#111111] border border-gray-800 rounded-full p-1 gap-1">
+                  {(Object.entries(PERSONALITIES) as [PersonalityType, typeof PERSONALITIES['standard']][]).map(([key, p]) => (
+                    <button
+                      key={key}
+                      onClick={() => setPersonality(key)}
+                      className={`
+                        flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all
+                        ${personality === key
+                          ? 'bg-blue-600 text-white shadow-lg'
+                          : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}
+                      `}
+                    >
+                      <p.icon className={`w-3.5 h-3.5 ${personality === key ? 'text-white' : p.color}`} />
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="flex items-center gap-3">
                   <button onClick={() => setMessages([WELCOME_MESSAGE])} className="p-2 text-gray-500 hover:text-red-400 transition-colors"><Trash2 className="w-5 h-5" /></button>
                   <div className="w-4" /> {/* Spacer */}
                 </div>
               </header>
+
+              {/* Mobile Personality Selector */}
+              <div className="md:hidden flex items-center justify-center py-2 bg-black border-b border-gray-800 gap-2">
+                {(Object.entries(PERSONALITIES) as [PersonalityType, typeof PERSONALITIES['standard']][]).map(([key, p]) => (
+                  <button
+                    key={key}
+                    onClick={() => setPersonality(key)}
+                    className={`p-2 rounded-lg transition-all ${personality === key ? 'bg-blue-600 text-white' : 'text-gray-500'}`}
+                    title={p.name}
+                  >
+                    <p.icon className="w-4 h-4" />
+                  </button>
+                ))}
+              </div>
 
               {/* Chat Content */}
               <div className="flex-1 overflow-y-auto custom-scrollbar px-6 sm:px-20 py-10 space-y-12">
