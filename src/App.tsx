@@ -38,16 +38,22 @@ const STORAGE_KEYS = {
 
 type ViewType = 'chat' | 'live' | 'realtime' | 'landing'
 
+const WELCOME_MESSAGE: Message = {
+  role: 'assistant',
+  content: 'I am your private intelligence. Everything you say stays on your own server. My neural weights are open-source, and your data never leaves this node.\n\nHow can I help you explore today?',
+  timestamp: new Date().toLocaleTimeString()
+}
+
 function App() {
   // --- State ---
   const [view, setView] = useState<ViewType>(() => (localStorage.getItem(STORAGE_KEYS.VIEW) as ViewType) || 'chat')
   const [messages, setMessages] = useState<Message[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.MESSAGES)
-    return saved ? JSON.parse(saved) : [{
-      role: 'assistant',
-      content: 'I am your private intelligence. Everything you say stays on your own server. How can I help you explore today?',
-      timestamp: new Date().toLocaleTimeString()
-    }]
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (parsed.length > 0) return parsed
+    }
+    return [WELCOME_MESSAGE]
   })
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -283,7 +289,7 @@ function App() {
                   <h2 className="text-xl font-black tracking-tight uppercase">Private AI Chat</h2>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setMessages([])} className="p-2 text-gray-500 hover:text-red-400 transition-colors"><Trash2 className="w-5 h-5" /></button>
+                  <button onClick={() => setMessages([WELCOME_MESSAGE])} className="p-2 text-gray-500 hover:text-red-400 transition-colors"><Trash2 className="w-5 h-5" /></button>
                   <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 text-gray-500 hover:text-white transition-colors"><MoreVertical className="w-5 h-5" /></button>
                 </div>
               </header>
