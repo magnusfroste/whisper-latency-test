@@ -5,10 +5,11 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
 import os from 'os'
+import ffmpegStatic from 'ffmpeg-static'
 import { spawn } from 'child_process'
 
 // Get ffmpeg path
-const ffmpegPath = '/usr/bin/ffmpeg'
+const ffmpegPath = ffmpegStatic || '/usr/bin/ffmpeg'
 
 dotenv.config()
 
@@ -80,8 +81,8 @@ const convertToWav = async (audioBuffer: Buffer): Promise<Buffer> => {
         console.error('[FFmpeg] Konverteringsfel, exit code:', code)
         console.error('[FFmpeg] stderr:', stderr)
         // Cleanup
-        try { fs.unlinkSync(inputPath) } catch {}
-        try { fs.unlinkSync(outputPath) } catch {}
+        try { fs.unlinkSync(inputPath) } catch { }
+        try { fs.unlinkSync(outputPath) } catch { }
         reject(new Error(`ffmpeg exited with code ${code}`))
       }
     })
@@ -89,8 +90,8 @@ const convertToWav = async (audioBuffer: Buffer): Promise<Buffer> => {
     ffmpegProcess.on('error', (err) => {
       console.error('[FFmpeg] Process error:', err)
       // Cleanup
-      try { fs.unlinkSync(inputPath) } catch {}
-      try { fs.unlinkSync(outputPath) } catch {}
+      try { fs.unlinkSync(inputPath) } catch { }
+      try { fs.unlinkSync(outputPath) } catch { }
       reject(err)
     })
   })
@@ -191,7 +192,7 @@ app.post('/api/transcribe', upload.single('file'), async (req: MulterRequest, re
     // Cleanup temp file
     try {
       fs.unlinkSync(req.file.path)
-    } catch {}
+    } catch { }
   }
 })
 

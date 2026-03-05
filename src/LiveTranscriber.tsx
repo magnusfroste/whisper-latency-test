@@ -63,12 +63,11 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
 
       mediaRecorder.onstop = () => {
         stream.getTracks().forEach(track => track.stop())
-        // Send any remaining chunks
+        // Send final state
         if (chunksRef.current.length > 0) {
           const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
           console.log('[Live] Sending final chunk:', blob.size, 'bytes')
-          sendChunk(blob)
-          chunksRef.current = []
+          sendChunk(blob).then((text) => setFinalText(text || liveText))
         }
       }
 
@@ -76,15 +75,17 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
       mediaRecorder.start()
       setIsRecording(true)
 
-      // Send chunks every 5 seconds for better audio quality
+      // Send accumulated chunks every 3 seconds for better real-time feel
       intervalRef.current = setInterval(async () => {
         if (chunksRef.current.length > 0) {
           const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-          console.log('[Live] Sending chunk:', blob.size, 'bytes')
+          console.log('[Live] Sending accumulated chunks:', blob.size, 'bytes')
           await sendChunk(blob)
-          chunksRef.current = []
+          // We DO NOT clear chunksRef.current = [] here!
+          // We must send the whole accumulated recording each time so that it includes the valid WebM header
+          // and so Whisper can use the full context to fix mistakes continuously.
         }
-      }, 5000)
+      }, 3000)
 
       console.log('[Live] Recording started')
     } catch (err) {
@@ -134,12 +135,13 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
       const data = await response.json()
       console.log('[Live] Transcription:', data.text)
 
-      // Update live text state for real-time updates
-      const newText = liveText && !data.text.startsWith(liveText)
-        ? liveText + ' ' + data.text
-        : data.text
-      setLiveText(newText)
-      console.log('[Live] setLiveText:', newText.substring(0, 50))
+      // Because we send the full audio from the start every time,
+      // Whisper will transcribe the entire thing again. We can just replace the text.
+      if (data.text) {
+        setLiveText(data.text)
+        console.log('[Live] setLiveText:', data.text.substring(0, 50))
+        return data.text
+      }
     } catch (err) {
       console.warn('[Live] Transcription error:', err)
       // Don't show error, just skip this chunk
@@ -175,15 +177,13 @@ export default function LiveTranscriber({ onBack }: LiveTranscriberProps) {
         </div>
 
         {/* Health Status */}
-        <div className={`rounded-lg p-3 mb-6 border text-sm ${
-          health?.whisper_connected
+        <div className={`rounded-lg p-3 mb-6 border text-sm ${health?.whisper_connected
             ? 'bg-green-900/30 border-green-700'
             : 'bg-red-900/30 border-red-700'
-        }`}>
+          }`}>
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${
-              health?.whisper_connected ? 'bg-green-500' : 'bg-red-500'
-            }`} />
+            <div className={`w-2 h-2 rounded-full ${health?.whisper_connected ? 'bg-green-500' : 'bg-red-500'
+              }`} />
             <span>
               Whisper: {health?.whisper_connected ? 'Connected' : 'Disconnected'}
             </span>

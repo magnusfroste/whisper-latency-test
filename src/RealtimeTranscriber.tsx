@@ -76,7 +76,7 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
       }
 
       mediaRecorderRef.current = mediaRecorder
-      mediaRecorder.start(5000) // Get chunks every 5 seconds for better quality
+      mediaRecorder.start(200) // Get chunks quickly so they accumulate
       setIsRecording(true)
     } catch (err) {
       setError('Could not access microphone.')
@@ -105,7 +105,8 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
       if (chunksRef.current.length > 0) {
         setIsProcessing(true)
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        chunksRef.current = []
+        // We DO NOT clear chunksRef.current = [] here!
+        // We accumulate the audio and send it continuously.
 
         try {
           const formData = new FormData()
@@ -118,13 +119,10 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
 
           if (response.ok) {
             const data = await response.json()
-            setTranscribedText(prev => {
-              const newText = prev && !data.text.startsWith(prev)
-                ? prev + ' ' + data.text
-                : data.text
-              console.log('[Realtime] Text:', newText.substring(0, 50))
-              return newText
-            })
+            if (data.text) {
+              setTranscribedText(data.text)
+              console.log('[Realtime] Text updated:', data.text.substring(0, 50))
+            }
           } else {
             console.warn('[Realtime] Transcription failed:', response.status)
           }
@@ -134,7 +132,7 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
           setIsProcessing(false)
         }
       }
-    }, 5000) // Send chunks every 5 seconds for better audio quality
+    }, 3000) // Send accumulated audio every 3 seconds
 
     return () => clearInterval(interval)
   }, [isRecording, isProcessing])
@@ -177,8 +175,8 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
 
         {/* Health Status */}
         <div className={`rounded-lg p-3 mb-6 border text-sm ${health?.whisper_connected
-            ? 'bg-green-900/30 border-green-700'
-            : 'bg-red-900/30 border-red-700'
+          ? 'bg-green-900/30 border-green-700'
+          : 'bg-red-900/30 border-red-700'
           }`}>
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${health?.whisper_connected ? 'bg-green-500' : 'bg-red-500'
@@ -255,8 +253,8 @@ export default function RealtimeTranscriber({ onBack }: RealtimeTranscriberProps
           <h3 className="font-semibold mb-2">How it works:</h3>
           <ul className="text-sm text-gray-400 space-y-1">
             <li>• Click "Start" to begin transcribing</li>
-            <li>• Audio is saved in chunks every 5 seconds</li>
-            <li>• Each chunk is sent to Whisper and text updates continuously</li>
+            <li>• Audio is streamed continuously to Whisper</li>
+            <li>• The entire phrase updates smoothly to fix mistakes</li>
             <li>• Click "Stop" when you are done</li>
             <li>• Copy or clear the text</li>
           </ul>
