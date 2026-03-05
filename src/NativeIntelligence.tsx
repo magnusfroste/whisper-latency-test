@@ -28,10 +28,27 @@ export default function NativeIntelligence() {
     const [isLoading, setIsLoading] = useState(false)
     const [isRecording, setIsRecording] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [health, setHealth] = useState<{ ultravox_connected: boolean } | null>(null)
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const chunksRef = useRef<Blob[]>([])
+
+    const checkHealth = async () => {
+        try {
+            const response = await fetch('/api/health')
+            const data = await response.json()
+            setHealth(data)
+        } catch (err) {
+            setHealth({ ultravox_connected: false })
+        }
+    }
+
+    useEffect(() => {
+        checkHealth()
+        const interval = setInterval(checkHealth, 15000)
+        return () => clearInterval(interval)
+    }, [])
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -158,9 +175,17 @@ export default function NativeIntelligence() {
                         </div>
                     </div>
                 </div>
-                <button onClick={() => setMessages([])} className="p-2 text-gray-500 hover:text-red-400 transition-colors">
-                    <Trash2 className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#161616] border border-gray-800 rounded-full">
+                        <div className={`w-1.5 h-1.5 rounded-full ${health?.ultravox_connected ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            Native {health?.ultravox_connected ? 'Online' : 'Offline'}
+                        </span>
+                    </div>
+                    <button onClick={() => setMessages([])} className="p-2 text-gray-500 hover:text-red-400 transition-colors">
+                        <Trash2 className="w-5 h-5" />
+                    </button>
+                </div>
             </header>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar px-6 sm:px-20 py-10 space-y-12">
