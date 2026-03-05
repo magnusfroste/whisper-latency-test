@@ -17,10 +17,12 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
+const PORT = process.env.PORT || 3000
 const WHISPER_URL = process.env.WHISPER_URL || 'http://whisper-vllm:8001'
 const ULTRAVOX_URL = process.env.ULTRAVOX_URL || 'http://ultravox-vllm:8002'
 const ULTRAVOX_MODEL_NAME = process.env.ULTRAVOX_MODEL_NAME || 'ultravox'
 
+console.log('[Config] PORT:', PORT)
 console.log('[Config] WHISPER_URL:', WHISPER_URL)
 console.log('[Config] ULTRAVOX_URL:', ULTRAVOX_URL)
 console.log('[Config] ULTRAVOX_MODEL_NAME:', ULTRAVOX_MODEL_NAME)
@@ -360,8 +362,8 @@ app.get('*', (req: express.Request, res: express.Response) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'))
 })
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Server] Körs på port ${PORT}`)
   console.log(`Whisper URL: ${WHISPER_URL}`)
   console.log(`Ultravox URL: ${ULTRAVOX_URL}`)
 })
