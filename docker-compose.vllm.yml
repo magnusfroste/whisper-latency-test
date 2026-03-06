@@ -75,3 +75,12 @@ services:
     environment:
       - DEVICE=cpu
       - ONNX_DEVICE=cpu
+
+  piper-tts:
+    build:
+      context: .
+      dockerfile: Dockerfile.piper
+    container_name: piper-tts
+    restart: unless-stopped
+    ports:
+      - "8004:8004"

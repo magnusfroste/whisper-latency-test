@@ -21,6 +21,7 @@ const PORT = Number(process.env.PORT) || 3000
 const WHISPER_URL = process.env.WHISPER_URL || 'http://whisper-vllm:8001'
 const ULTRAVOX_URL = process.env.ULTRAVOX_URL || 'http://ultravox-vllm:8002'
 const KOKORO_URL = process.env.KOKORO_URL || 'http://kokoro-tts:8003'
+const PIPER_URL = process.env.PIPER_URL || 'http://piper-tts:8004'
 const ULTRAVOX_MODEL_NAME = process.env.ULTRAVOX_MODEL_NAME || 'ultravox'
 
 console.log('[Config] PORT:', PORT)
@@ -28,6 +29,7 @@ console.log('[Config] WHISPER_URL:', WHISPER_URL)
 console.log('[Config] ULTRAVOX_URL:', ULTRAVOX_URL)
 console.log('[Config] ULTRAVOX_MODEL_NAME:', ULTRAVOX_MODEL_NAME)
 console.log('[Config] KOKORO_URL:', KOKORO_URL)
+console.log('[Config] PIPER_URL:', PIPER_URL)
 
 // Parse JSON bodies
 app.use(express.json())
@@ -222,54 +224,75 @@ app.get('/api/health', async (req: express.Request, res: express.Response) => {
     }
   }
 
+  const checkServiceRoot = async (url: string, timeout = 5000) => {
+    const controller = new AbortController()
+    const id = setTimeout(() => controller.abort(), timeout)
+    try {
+      const resp = await fetch(`${url}/health`, { signal: controller.signal })
+      clearTimeout(id)
+      return resp.ok
+    } catch (e) {
+      clearTimeout(id)
+      return false
+    }
+  }
+
   const whisperOk = await checkService(WHISPER_URL)
   const ultravoxOk = await checkService(ULTRAVOX_URL)
   const kokoroOk = await checkService(KOKORO_URL)
+  const piperOk = await checkServiceRoot(PIPER_URL)
 
   res.json({
-    status: whisperOk && ultravoxOk && kokoroOk ? 'healthy' : 'degraded',
+    status: whisperOk && ultravoxOk ? 'healthy' : 'degraded',
     whisper_connected: whisperOk,
     ultravox_connected: ultravoxOk,
     kokoro_connected: kokoroOk,
+    piper_connected: piperOk,
     whisper: { url: WHISPER_URL, connected: whisperOk },
     ultravox: { url: ULTRAVOX_URL, connected: ultravoxOk },
-    kokoro: { url: KOKORO_URL, connected: kokoroOk }
+    kokoro: { url: KOKORO_URL, connected: kokoroOk },
+    piper: { url: PIPER_URL, connected: piperOk }
   })
 })
 
-// --- TTS Endpoint (Kokoro Proxy) ---
+// --- TTS Endpoint (Multi-engine Proxy) ---
 app.post('/api/tts', async (req: express.Request, res: express.Response) => {
   try {
-    const { text, voice = 'af_heart' } = req.body
+    const { text, voice = 'af_heart', engine = 'kokoro' } = req.body
     if (!text) return res.status(400).json({ error: 'No text provided' })
 
-    console.log(`[TTS] Request: "${text.substring(0, 30)}..." Voice: ${voice}`)
+    const isPiper = engine === 'piper'
+    const targetUrl = isPiper ? `${PIPER_URL}/v1/audio/speech` : `${KOKORO_URL}/v1/audio/speech`
+    const voiceParam = isPiper ? (voice.startsWith('sv') ? 'sv_SE-nst-medium' : 'en_US-lessac-medium') : voice
+
+    console.log(`[TTS] Engine: ${engine}, Voice: ${voiceParam}, Text: "${text.substring(0, 30)}..."`)
 
     const startTime = Date.now()
-    const response = await fetch(`${KOKORO_URL}/v1/audio/speech`, {
+    const response = await fetch(targetUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'kokoro',
+        model: isPiper ? 'piper' : 'kokoro',
         input: text,
-        voice: voice,
-        response_format: 'mp3',
+        voice: voiceParam,
+        response_format: isPiper ? 'wav' : 'mp3',
         speed: 1.0
       })
     })
 
     if (!response.ok) {
       const errText = await response.text()
-      console.error(`[TTS] Error from Kokoro: ${response.status} - ${errText}`)
+      console.error(`[TTS] Error from ${engine}: ${response.status} - ${errText}`)
       throw new Error(`TTS API failed: ${errText}`)
     }
 
     const duration = Date.now() - startTime
-    console.log(`[TTS] Kokoro responded in ${duration}ms with status ${response.status}`)
+    console.log(`[TTS] ${engine} responded in ${duration}ms`)
 
-    res.setHeader('Content-Type', 'audio/mpeg')
+    const contentType = isPiper ? 'audio/wav' : 'audio/mpeg'
+    res.setHeader('Content-Type', contentType)
     const arrayBuffer = await response.arrayBuffer()
-    console.log(`[TTS] Sending ${arrayBuffer.byteLength} bytes of audio to client`)
+    console.log(`[TTS] Sending ${arrayBuffer.byteLength} bytes to client`)
     res.send(Buffer.from(arrayBuffer))
   } catch (err) {
     console.error('[TTS] Proxy Error:', err)

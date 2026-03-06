@@ -36,8 +36,9 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
     const [isLoading, setIsLoading] = useState(false)
     const [isRecording, setIsRecording] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [health, setHealth] = useState<{ ultravox_connected: boolean, kokoro_connected: boolean } | null>(null)
+    const [health, setHealth] = useState<{ ultravox_connected: boolean, kokoro_connected: boolean, piper_connected?: boolean } | null>(null)
     const [voiceOutput, setVoiceOutput] = useState(true)
+    const [ttsEngine, setTtsEngine] = useState<'kokoro' | 'piper'>('kokoro')
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -165,7 +166,7 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
             setMessages(prev => [...prev, assistantMsg])
 
             if (voiceOutput && assistantMsg.content) {
-                playAudio(assistantMsg.content)
+                playAudio(assistantMsg.content, ttsEngine)
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Native Chat Error')
@@ -209,7 +210,7 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
             setMessages(prev => [...prev, assistantMsg])
 
             if (voiceOutput && assistantMsg.content) {
-                playAudio(assistantMsg.content)
+                playAudio(assistantMsg.content, ttsEngine)
             }
         } catch (err) {
             setError('Native model text-fallback failed.')
@@ -218,13 +219,14 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
         }
     }
 
-    const playAudio = async (text: string) => {
+    const playAudio = async (text: string, engine: 'kokoro' | 'piper' = 'kokoro') => {
         try {
-            console.log('[Native] Requesting TTS for:', text.substring(0, 30) + '...')
+            const voice = engine === 'piper' ? 'sv_SE-nst-medium' : 'af_heart'
+            console.log(`[Native] Requesting TTS (${engine}) for:`, text.substring(0, 30) + '...')
             const response = await fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text, voice: 'af_heart' })
+                body: JSON.stringify({ text, voice, engine })
             })
             if (!response.ok) throw new Error(`TTS Failed with status: ${response.status}`)
 
@@ -285,6 +287,32 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
                             Native {health?.ultravox_connected ? 'Online' : 'Offline'}
                         </span>
                     </div>
+
+                    {/* TTS Engine Toggle */}
+                    {voiceOutput && (
+                        <div className="flex items-center bg-[#111111] border border-gray-800 rounded-full overflow-hidden">
+                            <button
+                                onClick={() => setTtsEngine('kokoro')}
+                                className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${ttsEngine === 'kokoro'
+                                    ? 'bg-purple-600 text-white'
+                                    : 'text-gray-500 hover:text-gray-300'
+                                    }`}
+                                title="Kokoro TTS (English)"
+                            >
+                                🇬🇧 EN
+                            </button>
+                            <button
+                                onClick={() => setTtsEngine('piper')}
+                                className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${ttsEngine === 'piper'
+                                    ? 'bg-purple-600 text-white'
+                                    : 'text-gray-500 hover:text-gray-300'
+                                    }`}
+                                title="Piper TTS (Swedish)"
+                            >
+                                🇸🇪 SV
+                            </button>
+                        </div>
+                    )}
 
                     <button
                         onClick={() => setVoiceOutput(!voiceOutput)}
