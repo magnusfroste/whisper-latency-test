@@ -67,18 +67,8 @@ services:
     command: -c "pip install vllm[audio] && vllm serve fixie-ai/ultravox-v0_5-llama-3_1-8b --host 0.0.0.0 --trust-remote-code --dtype bfloat16 --max-model-len 4096 --enforce-eager --served-model-name ultravox --gpu-memory-utilization 0.60 --limit-mm-per-prompt '{\"audio\":1}'"
 
   kokoro-tts:
-    image: ghcr.io/remsky/kokoro-fastapi-gpu:latest
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
     container_name: kokoro-tts
     restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              # Sharing GPU 0 or 1. Let's try 0 as it has more headroom (Whisper uses 0.20)
-              device_ids: [ '0' ]
-              capabilities: [ gpu ]
     ports:
       - "8003:8880"
-    environment:
-      - CUDA_DEVICE_ORDER=PCI_BUS_ID
