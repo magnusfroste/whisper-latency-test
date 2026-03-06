@@ -18,7 +18,9 @@ interface Message {
     timestamp: string
 }
 
-interface NativeIntelligenceProps {}
+interface NativeIntelligenceProps {
+    // No props needed - self-contained component
+}
 
 type PersonalityType = 'standard' | 'sycophant' | 'formal' | 'rude'
 
