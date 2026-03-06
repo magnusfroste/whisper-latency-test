@@ -329,7 +329,7 @@ app.post('/api/chat/native', upload.single('file'), async (req: MulterRequest, r
   console.log('[NativeChat] Request received')
 
   const prompt = (req.body.prompt as string) || "User is speaking."
-  const systemPrompt = (req.body.systemPrompt as string) || "You are Autoversio Native Agent, a state-of-the-art multimodal AI. You hear the user directly. Always respond concisely and accurately in the same language as the user (default to Swedish if unsure). Maintain a professional yet helpful tone. If you receive audio, it is the primary source of truth."
+  const systemPrompt = (req.body.systemPrompt as string) || "You are the Autoversio Native Agent. You are a state-of-the-art multimodal AI. You hear the user directly. IMPORTANT: You must always respond in exactly the same language as the user. If they speak English, you speak English. If they speak Swedish, you speak Swedish. Be concise and professional."
 
   try {
     let content: any[] = [{ type: 'text', text: prompt }]

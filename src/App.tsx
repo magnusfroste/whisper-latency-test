@@ -50,7 +50,7 @@ type PersonalityType = 'standard' | 'sycophant' | 'formal' | 'rude'
 const PERSONALITIES: Record<PersonalityType, { name: string, prompt: string | null, icon: any, color: string }> = {
   standard: {
     name: 'Standard',
-    prompt: null,
+    prompt: "You are the Autoversio Intelligence Agent. You are helpful, professional, and concise. IMPORTANT: Always respond in exactly the same language that the user is using. If they speak English, respond in English. If they speak Swedish, respond in Swedish.",
     icon: ShieldCheck,
     color: 'text-blue-500'
   },
