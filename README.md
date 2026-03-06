@@ -181,6 +181,209 @@ graph TD
 
 ---
 
+## 📡 API Reference
+
+All services expose **OpenAI-compatible REST APIs**. They can be called directly or via the Node.js proxy at `http://your-server:3000`.
+
+---
+
+### 1. Whisper — Speech-to-Text  
+**Endpoint:** `POST http://your-server:8001/v1/audio/transcriptions`  
+**Model:** `openai/whisper-large-v3`
+
+```bash
+curl -X POST http://your-server:8001/v1/audio/transcriptions \
+  -F "file=@audio.wav" \
+  -F "model=whisper-large-v3" \
+  -F "response_format=json" \
+  -F "language=sv"   # optional, omit for auto-detect
+```
+
+```json
+{
+  "text": "Hej världen, detta är ett test."
+}
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `file` | binary | Audio file (WAV, WebM, MP3, etc.) |
+| `model` | string | `whisper-large-v3` |
+| `language` | string | ISO 639-1 code (`sv`, `en`, ...) or omit for auto |
+| `response_format` | string | `json` (default), `text`, `verbose_json` |
+
+---
+
+### 2. LLM (Qwen / vLLM) — Text Chat  
+**Endpoint:** `POST http://your-server:8000/v1/chat/completions`  
+**Model:** `Qwen/Qwen2.5-32B-Instruct` (or whichever model you serve)
+
+```bash
+curl -X POST http://your-server:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen2.5-32B-Instruct",
+    "messages": [
+      { "role": "system", "content": "You are a helpful assistant." },
+      { "role": "user",   "content": "Explain quantum entanglement simply." }
+    ],
+    "temperature": 0.7,
+    "max_tokens": 512
+  }'
+```
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "model": "Qwen/Qwen2.5-32B-Instruct",
+  "choices": [{
+    "index": 0,
+    "message": { "role": "assistant", "content": "Quantum entanglement is..." },
+    "finish_reason": "stop"
+  }],
+  "usage": { "prompt_tokens": 25, "completion_tokens": 80, "total_tokens": 105 }
+}
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `model` | string | Served model name |
+| `messages` | array | Conversation history (role + content) |
+| `temperature` | float | 0.0–2.0, creativity control |
+| `max_tokens` | int | Max output tokens |
+| `stream` | bool | Enable SSE streaming |
+
+---
+
+### 3. Ultravox — Native Audio Chat  
+**Endpoint:** `POST http://your-server:8002/v1/chat/completions`  
+**Model:** `fixie-ai/ultravox-v0_5-llama-3_1-8b` (served as `ultravox`)
+
+Ultravox accepts raw audio as base64 alongside text — no STT step needed.
+
+```bash
+# Encode audio to base64 first
+AUDIO_B64=$(base64 -i audio.wav | tr -d '\n')
+
+curl -X POST http://your-server:8002/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"ultravox\",
+    \"messages\": [
+      { \"role\": \"system\", \"content\": \"You are a helpful assistant. Always respond in the same language as the user.\" },
+      {
+        \"role\": \"user\",
+        \"content\": [
+          { \"type\": \"text\", \"text\": \"User is speaking.\" },
+          { \"type\": \"input_audio\", \"input_audio\": { \"data\": \"$AUDIO_B64\", \"format\": \"wav\" } }
+        ]
+      }
+    ],
+    \"max_tokens\": 512,
+    \"temperature\": 0.2
+  }"
+```
+
+```json
+{
+  "model": "ultravox",
+  "choices": [{
+    "message": { "role": "assistant", "content": "Hej! Hur kan jag hjälpa dig?" },
+    "finish_reason": "stop"
+  }],
+  "usage": { "prompt_tokens": 114, "completion_tokens": 12, "total_tokens": 126 }
+}
+```
+
+| Content type | Description |
+|---|---|
+| `text` | Prompt/context text |
+| `input_audio` | Base64-encoded WAV audio with `format: "wav"` |
+
+---
+
+### 4. Kokoro — English TTS  
+**Endpoint:** `POST http://your-server:8003/v1/audio/speech`  
+**Model:** `kokoro` (Kokoro-82M ONNX)
+
+```bash
+curl -X POST http://your-server:8003/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "kokoro",
+    "input": "Hello! How can I help you today?",
+    "voice": "af_heart",
+    "response_format": "mp3",
+    "speed": 1.0
+  }' \
+  --output speech.mp3
+```
+
+**Available voices:**
+
+| Voice ID | Description |
+|---|---|
+| `af_heart` | American Female — warm, natural (recommended) |
+| `af_sarah` | American Female — clear |
+| `af_bella` | American Female — expressive |
+| `am_adam` | American Male |
+| `am_michael` | American Male — deep |
+| `bf_emma` | British Female |
+| `bm_george` | British Male |
+
+---
+
+### 5. Piper — Swedish (+ English) TTS  
+**Endpoint:** `POST http://your-server:8004/v1/audio/speech`  
+**Model:** `piper`
+
+```bash
+curl -X POST http://your-server:8004/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "piper",
+    "input": "Hej! Hur kan jag hjälpa dig idag?",
+    "voice": "sv_SE-nst-medium",
+    "response_format": "wav"
+  }' \
+  --output speech.wav
+```
+
+**Available voices (pre-loaded):**
+
+| Voice ID | Language | Description |
+|---|---|---|
+| `sv_SE-nst-medium` | 🇸🇪 Swedish | Native Swedish NST voice |
+| `en_US-lessac-medium` | 🇬🇧 English | Clear American English |
+
+Returns raw **WAV** audio. The Piper service exposes the same `/v1/audio/speech` interface as Kokoro for drop-in compatibility.
+
+---
+
+### 6. App Proxy Endpoints  
+The Node.js app at port `3000` also exposes these convenience endpoints:
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/transcribe` | Proxy to Whisper (handles WebM→WAV conversion) |
+| `POST` | `/api/chat` | Proxy to any OpenAI-compatible LLM |
+| `POST` | `/api/chat/native` | Proxy to Ultravox (handles audio encoding) |
+| `POST` | `/api/tts` | Smart TTS proxy (routes to Kokoro or Piper) |
+| `GET` | `/api/health` | Status of all connected services |
+
+**`/api/tts` engine routing:**
+```json
+{
+  "text": "Hej världen",
+  "voice": "sv_SE-nst-medium",
+  "engine": "piper"
+}
+```
+Set `engine` to `"kokoro"` or `"piper"`. The frontend uses auto-detection based on response language.
+
+---
+
 ## About Autoversio
 
 **[Autoversio](https://www.autoversio.ai)** is a Swedish AI provider offering flexible deployment options:
