@@ -7,7 +7,9 @@ import {
     Trash2,
     X,
     Cpu,
-    Sparkles
+    Sparkles,
+    Volume2,
+    VolumeX
 } from 'lucide-react'
 
 interface Message {
@@ -34,7 +36,8 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
     const [isLoading, setIsLoading] = useState(false)
     const [isRecording, setIsRecording] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [health, setHealth] = useState<{ ultravox_connected: boolean } | null>(null)
+    const [health, setHealth] = useState<{ ultravox_connected: boolean, kokoro_connected: boolean } | null>(null)
+    const [voiceOutput, setVoiceOutput] = useState(true)
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -160,6 +163,10 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
                 timestamp: new Date().toLocaleTimeString()
             }
             setMessages(prev => [...prev, assistantMsg])
+
+            if (voiceOutput && assistantMsg.content) {
+                playAudio(assistantMsg.content)
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Native Chat Error')
         } finally {
@@ -200,10 +207,31 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
                 timestamp: new Date().toLocaleTimeString()
             }
             setMessages(prev => [...prev, assistantMsg])
+
+            if (voiceOutput && assistantMsg.content) {
+                playAudio(assistantMsg.content)
+            }
         } catch (err) {
             setError('Native model text-fallback failed.')
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    const playAudio = async (text: string) => {
+        try {
+            const response = await fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, voice: 'af_heart' })
+            })
+            if (!response.ok) throw new Error('TTS Failed')
+            const blob = await response.blob()
+            const url = URL.createObjectURL(blob)
+            const audio = new Audio(url)
+            audio.play()
+        } catch (err) {
+            console.error('Playback error:', err)
         }
     }
 
@@ -249,6 +277,15 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
                             Native {health?.ultravox_connected ? 'Online' : 'Offline'}
                         </span>
                     </div>
+
+                    <button
+                        onClick={() => setVoiceOutput(!voiceOutput)}
+                        className={`p-2 rounded-lg transition-all ${voiceOutput ? 'text-purple-500 bg-purple-500/10' : 'text-gray-500 hover:text-white'}`}
+                        title={voiceOutput ? "Voice Output On" : "Voice Output Off"}
+                    >
+                        {voiceOutput ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                    </button>
+
                     <button onClick={() => setMessages([])} className="p-2 text-gray-500 hover:text-red-400 transition-colors">
                         <Trash2 className="w-5 h-5" />
                     </button>

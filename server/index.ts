@@ -20,6 +20,7 @@ const app = express()
 const PORT = Number(process.env.PORT) || 3000
 const WHISPER_URL = process.env.WHISPER_URL || 'http://whisper-vllm:8001'
 const ULTRAVOX_URL = process.env.ULTRAVOX_URL || 'http://ultravox-vllm:8002'
+const KOKORO_URL = process.env.KOKORO_URL || 'http://kokoro-tts:8003'
 const ULTRAVOX_MODEL_NAME = process.env.ULTRAVOX_MODEL_NAME || 'ultravox'
 
 console.log('[Config] PORT:', PORT)
@@ -222,14 +223,52 @@ app.get('/api/health', async (req: express.Request, res: express.Response) => {
 
   const whisperOk = await checkService(WHISPER_URL)
   const ultravoxOk = await checkService(ULTRAVOX_URL)
+  const kokoroOk = await checkService(KOKORO_URL)
 
   res.json({
-    status: whisperOk && ultravoxOk ? 'healthy' : 'degraded',
+    status: whisperOk && ultravoxOk && kokoroOk ? 'healthy' : 'degraded',
     whisper_connected: whisperOk,
     ultravox_connected: ultravoxOk,
+    kokoro_connected: kokoroOk,
     whisper: { url: WHISPER_URL, connected: whisperOk },
-    ultravox: { url: ULTRAVOX_URL, connected: ultravoxOk }
+    ultravox: { url: ULTRAVOX_URL, connected: ultravoxOk },
+    kokoro: { url: KOKORO_URL, connected: kokoroOk }
   })
+})
+
+// --- TTS Endpoint (Kokoro Proxy) ---
+app.post('/api/tts', async (req: express.Request, res: express.Response) => {
+  try {
+    const { text, voice = 'af_heart' } = req.body
+    if (!text) return res.status(400).json({ error: 'No text provided' })
+
+    console.log(`[TTS] Request: "${text.substring(0, 30)}..." Voice: ${voice}`)
+
+    const response = await fetch(`${KOKORO_URL}/v1/audio/speech`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'kokoro',
+        input: text,
+        voice: voice,
+        response_format: 'mp3',
+        speed: 1.0
+      })
+    })
+
+    if (!response.ok) {
+      const errText = await response.text()
+      console.error(`[TTS] Error: ${errText}`)
+      throw new Error(`TTS API failed: ${errText}`)
+    }
+
+    res.setHeader('Content-Type', 'audio/mpeg')
+    const arrayBuffer = await response.arrayBuffer()
+    res.send(Buffer.from(arrayBuffer))
+  } catch (err) {
+    console.error('[TTS] Proxy Error:', err)
+    res.status(500).json({ error: String(err) })
+  }
 })
 
 // Proxy endpoint för chat - skickar vidare till vllm
