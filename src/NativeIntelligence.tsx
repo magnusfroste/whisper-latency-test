@@ -51,7 +51,7 @@ const PERSONALITIES: Record<PersonalityType, { name: string, prompt: string | nu
   }
 }
 
-export default function NativeIntelligence({ personalities }: NativeIntelligenceProps) {
+export default function NativeIntelligence(_props: NativeIntelligenceProps) {
     const [personality, setPersonality] = useState<PersonalityType>('standard')
     const [messages, setMessages] = useState<Message[]>([
         {
