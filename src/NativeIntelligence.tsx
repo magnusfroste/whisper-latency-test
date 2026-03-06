@@ -18,9 +18,7 @@ interface Message {
     timestamp: string
 }
 
-interface NativeIntelligenceProps {
-    personalities: any;
-}
+interface NativeIntelligenceProps {}
 
 type PersonalityType = 'standard' | 'sycophant' | 'formal' | 'rude'
 
