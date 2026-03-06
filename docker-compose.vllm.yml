@@ -74,3 +74,4 @@ services:
       - "8003:8880"
     environment:
       - DEVICE=cpu
+      - ONNX_DEVICE=cpu
