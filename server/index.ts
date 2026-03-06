@@ -27,6 +27,7 @@ console.log('[Config] PORT:', PORT)
 console.log('[Config] WHISPER_URL:', WHISPER_URL)
 console.log('[Config] ULTRAVOX_URL:', ULTRAVOX_URL)
 console.log('[Config] ULTRAVOX_MODEL_NAME:', ULTRAVOX_MODEL_NAME)
+console.log('[Config] KOKORO_URL:', KOKORO_URL)
 
 // Parse JSON bodies
 app.use(express.json())
