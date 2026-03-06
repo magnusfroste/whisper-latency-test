@@ -38,7 +38,7 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
     const [error, setError] = useState<string | null>(null)
     const [health, setHealth] = useState<{ ultravox_connected: boolean, kokoro_connected: boolean, piper_connected?: boolean } | null>(null)
     const [voiceOutput, setVoiceOutput] = useState(true)
-    const [ttsEngine, setTtsEngine] = useState<'kokoro' | 'piper'>(() => (localStorage.getItem('tts_engine') as 'kokoro' | 'piper') || 'kokoro')
+    const [ttsEngine, setTtsEngine] = useState<'auto' | 'kokoro' | 'piper'>(() => (localStorage.getItem('tts_engine') as 'auto' | 'kokoro' | 'piper') || 'auto')
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -219,10 +219,19 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
         }
     }
 
-    const playAudio = async (text: string, engine: 'kokoro' | 'piper' = 'kokoro') => {
+    // Detect language from text: Swedish if it contains å, ä, ö or common Swedish words
+    const detectLanguage = (text: string): 'piper' | 'kokoro' => {
+        const swedishChars = /[åäöÅÄÖ]/
+        const swedishWords = /\b(och|att|det|jag|är|en|av|för|med|på|som|ett|han|hon|vi|de|till|från|men|om|kan|har|var|inte)\b/i
+        if (swedishChars.test(text) || swedishWords.test(text)) return 'piper'
+        return 'kokoro'
+    }
+
+    const playAudio = async (text: string, manualEngine: 'auto' | 'kokoro' | 'piper' = 'auto') => {
         try {
+            const engine = manualEngine === 'auto' ? detectLanguage(text) : manualEngine
             const voice = engine === 'piper' ? 'sv_SE-nst-medium' : 'af_heart'
-            console.log(`[Native] Requesting TTS (${engine}) for:`, text.substring(0, 30) + '...')
+            console.log(`[Native] TTS: engine=${engine} (mode=${manualEngine}), voice=${voice}`)
             const response = await fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -292,24 +301,28 @@ export default function NativeIntelligence({ personality, onPersonalityChange, p
                     {voiceOutput && (
                         <div className="flex items-center bg-[#111111] border border-gray-800 rounded-full overflow-hidden">
                             <button
+                                onClick={() => { setTtsEngine('auto'); localStorage.setItem('tts_engine', 'auto') }}
+                                className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${ttsEngine === 'auto' ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-gray-300'
+                                    }`}
+                                title="Auto-detect language"
+                            >
+                                Auto
+                            </button>
+                            <button
                                 onClick={() => { setTtsEngine('kokoro'); localStorage.setItem('tts_engine', 'kokoro') }}
-                                className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${ttsEngine === 'kokoro'
-                                    ? 'bg-purple-600 text-white'
-                                    : 'text-gray-500 hover:text-gray-300'
+                                className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${ttsEngine === 'kokoro' ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-gray-300'
                                     }`}
                                 title="Kokoro TTS (English)"
                             >
-                                🇬🇧 EN
+                                🇬🇧
                             </button>
                             <button
                                 onClick={() => { setTtsEngine('piper'); localStorage.setItem('tts_engine', 'piper') }}
-                                className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${ttsEngine === 'piper'
-                                    ? 'bg-purple-600 text-white'
-                                    : 'text-gray-500 hover:text-gray-300'
+                                className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${ttsEngine === 'piper' ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-gray-300'
                                     }`}
                                 title="Piper TTS (Swedish)"
                             >
-                                🇸🇪 SV
+                                🇸🇪
                             </button>
                         </div>
                     )}
