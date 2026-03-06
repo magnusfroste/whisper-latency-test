@@ -17,7 +17,9 @@ import {
   Heart,
   Briefcase,
   Zap,
-  Cpu
+  Cpu,
+  Volume2,
+  VolumeX
 } from 'lucide-react'
 import LiveTranscriber from './LiveTranscriber'
 import RealtimeTranscriber from './RealtimeTranscriber'
@@ -104,6 +106,8 @@ function App() {
     }
   })
   const [personality, setPersonality] = useState<PersonalityType>('standard')
+  const [voiceOutput, setVoiceOutput] = useState(false)
+  const [ttsEngine, setTtsEngine] = useState<'auto' | 'kokoro' | 'piper'>(() => (localStorage.getItem('tts_engine_stt') as 'auto' | 'kokoro' | 'piper') || 'auto')
 
   // --- Refs ---
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -215,6 +219,30 @@ function App() {
     setInput('')
   }
 
+  // --- TTS helpers (shared with NativeIntelligence) ---
+  const detectLanguage = (text: string): 'piper' | 'kokoro' => {
+    const swedishChars = /[åäöÅÄÖ]/
+    const swedishWords = /\b(och|att|det|jag|är|en|av|för|med|på|som|ett|han|hon|vi|de|till|från|men|om|kan|har|var|inte)\b/i
+    if (swedishChars.test(text) || swedishWords.test(text)) return 'piper'
+    return 'kokoro'
+  }
+
+  const playAudio = async (text: string, manualEngine: 'auto' | 'kokoro' | 'piper' = 'auto') => {
+    try {
+      const engine = manualEngine === 'auto' ? detectLanguage(text) : manualEngine
+      const voice = engine === 'piper' ? 'sv_SE-nst-medium' : 'af_heart'
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice, engine })
+      })
+      if (!response.ok) return
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      await new Audio(url).play()
+    } catch { /* silent fail */ }
+  }
+
   const sendMessage = async (text: string) => {
     const userMsg: Message = { role: 'user', content: text, timestamp: new Date().toLocaleTimeString() }
     setMessages(prev => [...prev, userMsg])
@@ -252,6 +280,7 @@ function App() {
         timestamp: new Date().toLocaleTimeString()
       }
       setMessages(prev => [...prev, assistantMsg])
+      if (voiceOutput && assistantMsg.content) playAudio(assistantMsg.content, ttsEngine)
     } catch (err) {
       setError('Model failed to respond.')
     } finally {
@@ -393,8 +422,22 @@ function App() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                  {/* TTS Engine Toggle */}
+                  {voiceOutput && (
+                    <div className="flex items-center bg-[#111111] border border-gray-800 rounded-full overflow-hidden">
+                      <button onClick={() => { setTtsEngine('auto'); localStorage.setItem('tts_engine_stt', 'auto') }} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${ttsEngine === 'auto' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-300'}`} title="Auto-detect">Auto</button>
+                      <button onClick={() => { setTtsEngine('kokoro'); localStorage.setItem('tts_engine_stt', 'kokoro') }} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${ttsEngine === 'kokoro' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-300'}`} title="Kokoro (EN)">🇬🇧</button>
+                      <button onClick={() => { setTtsEngine('piper'); localStorage.setItem('tts_engine_stt', 'piper') }} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${ttsEngine === 'piper' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-300'}`} title="Piper (SV)">🇸🇪</button>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setVoiceOutput(!voiceOutput)}
+                    className={`p-2 rounded-lg transition-all ${voiceOutput ? 'text-blue-500 bg-blue-500/10' : 'text-gray-500 hover:text-white'}`}
+                    title={voiceOutput ? 'Voice Output On' : 'Voice Output Off'}
+                  >
+                    {voiceOutput ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                  </button>
                   <button onClick={() => setMessages([WELCOME_MESSAGE])} className="p-2 text-gray-500 hover:text-red-400 transition-colors"><Trash2 className="w-5 h-5" /></button>
-                  <div className="w-4" /> {/* Spacer */}
                 </div>
               </header>
 
