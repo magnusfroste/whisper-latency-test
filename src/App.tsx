@@ -310,7 +310,7 @@ function App() {
               <div className="space-y-2">
                 {sidebarOpen && <div className="px-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3">Applications</div>}
                 <nav className="space-y-1">
-                  <NavItem id="chat" label="Intelligence Agent" icon={LayoutDashboard} />
+                  <NavItem id="chat" label="STT Agent" icon={LayoutDashboard} />
                   <NavItem id="native" label="Native Agent" icon={Cpu} />
                   <NavItem id="live" label="Transcribe" icon={Waves} />
                   <NavItem id="realtime" label="Realtime WS" icon={History} />
@@ -370,7 +370,7 @@ function App() {
                   >
                     {sidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}
                   </button>
-                  <h2 className="text-xl font-black tracking-tight uppercase ml-2">Intelligence Agent</h2>
+                  <h2 className="text-xl font-black tracking-tight uppercase ml-2">STT Agent</h2>
                 </div>
 
                 {/* Personality Selector */}
