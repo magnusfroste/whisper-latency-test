@@ -64,7 +64,7 @@ services:
     ipc: host
     shm_size: '32gb'
     entrypoint: /bin/bash
-    command: -c "pip install vllm[audio] && vllm serve fixie-ai/ultravox-v0_5-llama-3_1-8b --host 0.0.0.0 --trust-remote-code --dtype bfloat16 --max-model-len 4096 --enforce-eager --served-model-name ultravox --gpu-memory-utilization 0.40 --limit-mm-per-prompt '{\"audio\":1}'"
+    command: -c "pip install vllm[audio] && vllm serve fixie-ai/ultravox-v0_5-llama-3_1-8b --host 0.0.0.0 --trust-remote-code --dtype bfloat16 --max-model-len 4096 --enforce-eager --served-model-name ultravox --gpu-memory-utilization 0.50 --limit-mm-per-prompt '{\"audio\":1}'"
 
   kokoro-tts:
     image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
