@@ -101,7 +101,9 @@ export default function SovereignCompliance() {
                             and be 100% compliant with private AI regulations.
                         </p>
                         <a
-                            href="mailto:contact@autoversio.ai"
+                            href="https://www.autoversio.ai"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 px-8 py-4 bg-white text-black hover:bg-gray-200 rounded-2xl text-sm font-bold uppercase tracking-widest transition-all hover:translate-y-[-2px]"
                         >
                             Contact Us
