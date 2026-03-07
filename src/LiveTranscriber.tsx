@@ -18,6 +18,7 @@ interface HealthStatus {
   status: string
   whisper_connected: boolean
   whisper_latency_ms?: number
+  ultravox_connected: boolean
   error?: string
 }
 
@@ -190,7 +191,13 @@ export default function LiveTranscriber({ onSendToChat }: LiveTranscriberProps) 
           <div className="flex items-center gap-2 px-3 py-1.5 bg-[#161616] border border-gray-800 rounded-full">
             <div className={`w-1.5 h-1.5 rounded-full ${health?.whisper_connected ? 'bg-green-500' : 'bg-red-500'}`} />
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              Whisper {health?.whisper_connected ? 'Live' : 'Offline'}
+              STT {health?.whisper_connected ? 'Live' : 'Offline'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#161616] border border-gray-800 rounded-full">
+            <div className={`w-1.5 h-1.5 rounded-full ${health?.ultravox_connected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              LLM {health?.ultravox_connected ? 'Live' : 'Offline'}
             </span>
           </div>
           <button onClick={clearText} className="p-2 text-gray-500 hover:text-red-400 transition-colors">
