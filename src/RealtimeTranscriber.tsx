@@ -30,6 +30,8 @@ export default function RealtimeTranscriber({ onSendToChat }: RealtimeTranscribe
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const isProcessingRef = useRef(false)
+  const isRecordingRef = useRef(false)
 
   const checkHealth = async () => {
     try {
@@ -49,19 +51,28 @@ export default function RealtimeTranscriber({ onSendToChat }: RealtimeTranscribe
     checkHealth()
   }, [])
 
+  // Keep refs in sync with state
+  useEffect(() => {
+    isRecordingRef.current = isRecording
+  }, [isRecording])
+
+  useEffect(() => {
+    isProcessingRef.current = isProcessing
+  }, [isProcessing])
+
   // Handle Spacebar toggle
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (e.code === 'Space' && !e.repeat) {
         e.preventDefault()
-        if (isRecording) stopRecording()
+        if (isRecordingRef.current) stopRecording()
         else startRecording()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isRecording])
+  }, [])
 
   const startRecording = async () => {
     try {
@@ -87,6 +98,7 @@ export default function RealtimeTranscriber({ onSendToChat }: RealtimeTranscribe
       mediaRecorderRef.current = mediaRecorder
       mediaRecorder.start(200)
       setIsRecording(true)
+      isRecordingRef.current = true
     } catch (err) {
       setError('Could not access microphone.')
     }
@@ -96,36 +108,38 @@ export default function RealtimeTranscriber({ onSendToChat }: RealtimeTranscribe
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
+      isRecordingRef.current = false
     }
   }
 
-  // Send chunks periodically
+  // Send chunks periodically - only depends on isRecording, uses refs for state
   useEffect(() => {
-    if (!isRecording) return
+    if (!isRecordingRef.current) return
 
-    const interval = setInterval(async () => {
-      if (isProcessing) return
+    const interval = setInterval(() => {
+      if (isProcessingRef.current) return
       if (chunksRef.current.length > 0) {
+        isProcessingRef.current = true
         setIsProcessing(true)
+
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        try {
-          const formData = new FormData()
-          formData.append('file', blob, 'recording.webm')
-          const response = await fetch('/api/transcribe', { method: 'POST', body: formData })
-          if (response.ok) {
-            const data = await response.json()
-            if (data.text) setTranscribedText(data.text)
-          }
-        } catch (err) {
-          console.warn('[Realtime] Error:', err)
-        } finally {
-          setIsProcessing(false)
-        }
+        const formData = new FormData()
+        formData.append('file', blob, 'recording.webm')
+        fetch('/api/transcribe', { method: 'POST', body: formData })
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data?.text) setTranscribedText(data.text)
+          })
+          .catch(err => console.warn('[Realtime] Error:', err))
+          .finally(() => {
+            isProcessingRef.current = false
+            setIsProcessing(false)
+          })
       }
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [isRecording, isProcessing])
+  }, [isRecording])
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(transcribedText)

@@ -32,6 +32,8 @@ export default function LiveTranscriber({ onSendToChat }: LiveTranscriberProps) 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const isProcessingRef = useRef(false)
+  const isRecordingRef = useRef(false)
 
   const checkHealth = async () => {
     try {
@@ -51,19 +53,28 @@ export default function LiveTranscriber({ onSendToChat }: LiveTranscriberProps) 
     checkHealth()
   }, [])
 
+  // Keep ref in sync with state
+  useEffect(() => {
+    isRecordingRef.current = isRecording
+  }, [isRecording])
+
+  useEffect(() => {
+    isProcessingRef.current = isProcessing
+  }, [isProcessing])
+
   // Handle Spacebar toggle
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (e.code === 'Space' && !e.repeat) {
         e.preventDefault()
-        if (isRecording) stopRecording()
+        if (isRecordingRef.current) stopRecording()
         else startRecording()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isRecording])
+  }, [])
 
   const startRecording = async () => {
     try {
@@ -95,11 +106,13 @@ export default function LiveTranscriber({ onSendToChat }: LiveTranscriberProps) 
       mediaRecorderRef.current = mediaRecorder
       mediaRecorder.start()
       setIsRecording(true)
+      isRecordingRef.current = true
 
-      intervalRef.current = setInterval(async () => {
+      intervalRef.current = setInterval(() => {
+        if (isProcessingRef.current) return
         if (chunksRef.current.length > 0) {
           const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-          await sendChunk(blob)
+          sendChunk(blob)
         }
       }, 3000)
 
@@ -120,8 +133,10 @@ export default function LiveTranscriber({ onSendToChat }: LiveTranscriberProps) 
   }
 
   const sendChunk = async (blobData: Blob) => {
-    if (isProcessing) return
+    if (isProcessingRef.current) return
+    isProcessingRef.current = true
     setIsProcessing(true)
+
     const formData = new FormData()
     formData.append('file', blobData, 'recording.webm')
 
@@ -131,7 +146,6 @@ export default function LiveTranscriber({ onSendToChat }: LiveTranscriberProps) 
         body: formData
       })
       if (!response.ok) {
-        setIsProcessing(false)
         return
       }
       const data = await response.json()
@@ -142,6 +156,7 @@ export default function LiveTranscriber({ onSendToChat }: LiveTranscriberProps) 
     } catch (err) {
       console.warn('[Transcribe] Error:', err)
     } finally {
+      isProcessingRef.current = false
       setIsProcessing(false)
     }
   }

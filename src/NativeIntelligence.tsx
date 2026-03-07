@@ -72,6 +72,9 @@ export default function NativeIntelligence(_props: NativeIntelligenceProps) {
     const inputRef = useRef<HTMLTextAreaElement>(null)
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const chunksRef = useRef<Blob[]>([])
+    const isProcessingRef = useRef(false)
+    const isLoadingRef = useRef(false)
+    const isRecordingRef = useRef(false)
 
     const checkHealth = async () => {
         try {
@@ -93,18 +96,27 @@ export default function NativeIntelligence(_props: NativeIntelligenceProps) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages])
 
+    // Keep refs in sync with state
+    useEffect(() => {
+        isLoadingRef.current = isLoading
+    }, [isLoading])
+
+    useEffect(() => {
+        isRecordingRef.current = isRecording
+    }, [isRecording])
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) && e.target === inputRef.current) return
 
-            if (e.code === 'Space' && !e.repeat && !isLoading) {
+            if (e.code === 'Space' && !e.repeat && !isLoadingRef.current) {
                 e.preventDefault()
-                if (!isRecording) startRecording()
+                if (!isRecordingRef.current) startRecording()
             }
         }
 
         const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.code === 'Space' && isRecording) {
+            if (e.code === 'Space' && isRecordingRef.current) {
                 e.preventDefault()
                 stopRecording()
             }
@@ -116,7 +128,7 @@ export default function NativeIntelligence(_props: NativeIntelligenceProps) {
             window.removeEventListener('keydown', handleKeyDown)
             window.removeEventListener('keyup', handleKeyUp)
         }
-    }, [isRecording, isLoading])
+    }, [])
 
     const startRecording = async () => {
         try {
@@ -137,6 +149,7 @@ export default function NativeIntelligence(_props: NativeIntelligenceProps) {
             mediaRecorderRef.current = mediaRecorder
             mediaRecorder.start()
             setIsRecording(true)
+            isRecordingRef.current = true
         } catch (err) {
             setError('Microphone access denied.')
         }
@@ -146,13 +159,20 @@ export default function NativeIntelligence(_props: NativeIntelligenceProps) {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop()
             setIsRecording(false)
+            isRecordingRef.current = false
         }
     }
 
     const sendNativeVoice = async () => {
         if (chunksRef.current.length === 0) return
+        if (isProcessingRef.current) return
+        isProcessingRef.current = true
+
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        if (blob.size < 500) return
+        if (blob.size < 500) {
+            isProcessingRef.current = false
+            return
+        }
 
         setIsLoading(true)
         const formData = new FormData()
@@ -195,12 +215,14 @@ export default function NativeIntelligence(_props: NativeIntelligenceProps) {
             setError(err instanceof Error ? err.message : 'Native Chat Error')
         } finally {
             setIsLoading(false)
+            isProcessingRef.current = false
         }
     }
 
     const handleTextSubmit = async (e: FormEvent) => {
         e.preventDefault()
-        if (!input.trim() || isLoading) return
+        if (!input.trim() || isLoading || isProcessingRef.current) return
+        isProcessingRef.current = true
 
         // For native agent, even text could be sent to the same endpoint or a hybrid one.
         // Ultravox supports text-only too.
@@ -239,6 +261,7 @@ export default function NativeIntelligence(_props: NativeIntelligenceProps) {
             setError('Native model text-fallback failed.')
         } finally {
             setIsLoading(false)
+            isProcessingRef.current = false
         }
     }
 

@@ -114,6 +114,10 @@ function App() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const isProcessingRef = useRef(false)
+  const isLoadingRef = useRef(false)
+  const isRecordingRef = useRef(false)
+  const viewRef = useRef<ViewType>(view)
 
   // --- Effects ---
   useEffect(() => {
@@ -129,22 +133,35 @@ function App() {
     localStorage.setItem(STORAGE_KEYS.VIEW, view)
   }, [view])
 
+  // Keep refs in sync with state
+  useEffect(() => {
+    viewRef.current = view
+  }, [view])
+
+  useEffect(() => {
+    isLoadingRef.current = isLoading
+  }, [isLoading])
+
+  useEffect(() => {
+    isRecordingRef.current = isRecording
+  }, [isRecording])
+
   // --- Spacebar Logic (Global) ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) && e.target === inputRef.current) return
 
       if (e.code === 'Space' && !e.repeat) {
-        if (view === 'chat' && !isLoading) {
+        if (viewRef.current === 'chat' && !isLoadingRef.current) {
           e.preventDefault()
-          if (!isRecording) startRecording()
+          if (!isRecordingRef.current) startRecording()
         }
       }
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
-        if (view === 'chat' && isRecording) {
+        if (viewRef.current === 'chat' && isRecordingRef.current) {
           e.preventDefault()
           stopRecording()
         }
@@ -157,7 +174,7 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [view, isRecording, isLoading])
+  }, [])
 
   // --- Audio Functions ---
   const startRecording = async () => {
@@ -179,6 +196,7 @@ function App() {
       mediaRecorderRef.current = mediaRecorder
       mediaRecorder.start()
       setIsRecording(true)
+      isRecordingRef.current = true
     } catch (err) {
       setError('Microphone access denied.')
     }
@@ -188,13 +206,20 @@ function App() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
+      isRecordingRef.current = false
     }
   }
 
   const processVoice = async () => {
     if (chunksRef.current.length === 0) return
+    if (isProcessingRef.current) return
+    isProcessingRef.current = true
+
     const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-    if (blob.size < 500) return
+    if (blob.size < 500) {
+      isProcessingRef.current = false
+      return
+    }
 
     setIsLoading(true)
     const formData = new FormData()
@@ -207,7 +232,9 @@ function App() {
       if (data.text) await sendMessage(data.text)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Transcription Error')
+    } finally {
       setIsLoading(false)
+      isProcessingRef.current = false
     }
   }
 
