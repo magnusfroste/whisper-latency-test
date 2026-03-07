@@ -1,4 +1,4 @@
-# Autoversio Privacy Chat Node
+# Autoversio Privacy Chat Agent
 
 <div align="center">
 
