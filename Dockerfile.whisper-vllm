@@ -35,11 +35,3 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Set entrypoint
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-
-CMD ["vllm", "serve", "openai/whisper-large-v3", \
-     "--port", "8001", \
-     "--served-model-name", "openai/whisper-large-v3", \
-     "--gpu-memory-utilization", "0.45", \
-     "--max-num-seqs", "8", \
-     "--swap-space", "4", \
-     "--enforce-eager"]
