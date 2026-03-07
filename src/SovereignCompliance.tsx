@@ -136,6 +136,50 @@ export default function SovereignCompliance() {
                                 Data Controller. You have 100% visibility into the logs and infrastructure.
                             </p>
                         </div>
+                        <div className="space-y-2">
+                            <h5 className="font-semibold flex items-center gap-2">
+                                <Info className="w-4 h-4 text-purple-400" />
+                                Can I use this with sensitive healthcare or financial data?
+                            </h5>
+                            <p className="text-gray-400 text-sm leading-relaxed">
+                                Absolutely. Our Local Edge deployment option supports air-gapped environments, making it
+                                suitable for HIPAA, GDPR, and financial services compliance. All processing happens within
+                                your controlled infrastructure with no external data transmission.
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <h5 className="font-semibold flex items-center gap-2">
+                                <Info className="w-4 h-4 text-purple-400" />
+                                What happens if my internet connection goes down?
+                            </h5>
+                            <p className="text-gray-400 text-sm leading-relaxed">
+                                With Local Edge deployment, your system continues operating independently. Since all models
+                                run on your hardware, internet connectivity is only needed for updates and backups—not
+                                for daily operations.
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <h5 className="font-semibold flex items-center gap-2">
+                                <Info className="w-4 h-4 text-purple-400" />
+                                How do I ensure EU AI Act compliance?
+                            </h5>
+                            <p className="text-gray-400 text-sm leading-relaxed">
+                                By hosting models locally, you maintain full transparency and auditability. You control
+                                training data, can document all processing activities, and ensure no data crosses borders
+                                without consent—key requirements under the EU AI Act for high-risk systems.
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <h5 className="font-semibold flex items-center gap-2">
+                                <Info className="w-4 h-4 text-purple-400" />
+                                What support and maintenance is included?
+                            </h5>
+                            <p className="text-gray-400 text-sm leading-relaxed">
+                                We provide comprehensive support including model updates, security patches, and technical
+                                assistance. Our team helps you optimize performance and stay compliant with evolving
+                                regulations. Custom SLAs available for enterprise deployments.
+                            </p>
+                        </div>
                     </div>
                 </section>
 
