@@ -25,6 +25,7 @@ import LiveTranscriber from './LiveTranscriber'
 import RealtimeTranscriber from './RealtimeTranscriber'
 import NativeIntelligence from './NativeIntelligence'
 import SovereignCompliance from './SovereignCompliance'
+import TechStack from './TechStack'
 
 // --- Types ---
 interface Message {
@@ -46,7 +47,7 @@ const STORAGE_KEYS = {
   HISTORY: 'privai_chat_v2_history'
 }
 
-type ViewType = 'chat' | 'live' | 'realtime' | 'landing' | 'native' | 'compliance'
+type ViewType = 'chat' | 'live' | 'realtime' | 'landing' | 'native' | 'compliance' | 'techstack'
 type PersonalityType = 'standard' | 'sycophant' | 'formal' | 'rude'
 
 const PERSONALITIES: Record<PersonalityType, { name: string, prompt: string | null, icon: any, color: string }> = {
@@ -356,7 +357,7 @@ function App() {
             {sidebarOpen && (
               <div className="flex flex-col overflow-hidden whitespace-nowrap animate-in fade-in slide-in-from-left-2 transition-all">
                 <span className="font-black tracking-tighter text-xl">Autoversio</span>
-                <span className="text-[10px] text-blue-500 font-bold uppercase tracking-widest mt-[-4px]">Intelligence Node</span>
+                <span className="text-[10px] text-blue-500 font-bold uppercase tracking-widest mt-[-4px]">Private Node</span>
               </div>
             )}
           </div>
@@ -377,6 +378,7 @@ function App() {
             <div className="mt-auto pt-6 space-y-2">
               {sidebarOpen && <div className="px-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3">Information</div>}
               <nav className="space-y-1">
+                <NavItem id="techstack" label="Tech Stack" icon={Zap} />
                 <NavItem id="compliance" label="Compliance & Privacy" icon={ShieldCheck} />
                 <NavLink href="https://www.autoversio.ai" label="autoversio.ai" icon={ExternalLink} />
                 <NavLink href="https://github.com/magnusfroste/private-whisper-agent" label="Open Source" icon={Github} />
@@ -606,6 +608,7 @@ function App() {
             <NativeIntelligence />
           )}
           {view === 'compliance' && <SovereignCompliance />}
+          {view === 'techstack' && <TechStack />}
         </div>
       </main>
     </div>
