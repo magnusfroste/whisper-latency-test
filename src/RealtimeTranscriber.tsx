@@ -43,6 +43,7 @@ export default function RealtimeTranscriber({ onSendToChat }: RealtimeTranscribe
       setHealth({
         status: 'unhealthy',
         whisper_connected: false,
+        ultravox_connected: false,
         error: 'Could not reach Whisper'
       })
     }

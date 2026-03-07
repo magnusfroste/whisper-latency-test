@@ -45,6 +45,7 @@ export default function LiveTranscriber({ onSendToChat }: LiveTranscriberProps) 
       setHealth({
         status: 'unhealthy',
         whisper_connected: false,
+        ultravox_connected: false,
         error: 'Could not reach Whisper'
       })
     }
