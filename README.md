@@ -1,4 +1,4 @@
-# Autoversio Intelligence Node
+# Autoversio Privacy Chat Node
 
 <div align="center">
 
