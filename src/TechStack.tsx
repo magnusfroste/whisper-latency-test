@@ -1,4 +1,4 @@
-import { Mic, Zap, CheckCircle, ChevronRight } from 'lucide-react';
+import { Mic, Zap, ChevronRight } from 'lucide-react';
 
 export default function TechStack() {
     return (
