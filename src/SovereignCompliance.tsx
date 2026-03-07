@@ -91,6 +91,24 @@ export default function SovereignCompliance() {
                     </div>
                 </section>
 
+                {/* Call to Action Section */}
+                <section className="relative p-12 rounded-[3rem] bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 blur-3xl -mr-32 -mt-32 pointer-events-none" />
+                    <div className="relative z-10 text-center space-y-6">
+                        <h3 className="text-3xl font-bold">Need Help Delivering a Great User Experience?</h3>
+                        <p className="text-gray-400 max-w-xl mx-auto">
+                            Reach out if you want to know how to deliver a great user experience
+                            and be 100% compliant with private AI regulations.
+                        </p>
+                        <a
+                            href="mailto:contact@autoversio.ai"
+                            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-black hover:bg-gray-200 rounded-2xl text-sm font-bold uppercase tracking-widest transition-all hover:translate-y-[-2px]"
+                        >
+                            Contact Us
+                        </a>
+                    </div>
+                </section>
+
                 {/* FAQ Section Footer */}
                 <section className="pt-12 border-t border-gray-900 space-y-8">
                     <h3 className="text-2xl font-bold">Common Questions</h3>
