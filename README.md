@@ -1,4 +1,4 @@
-# Whisper Privacy Chat Agent
+# Privacy Audio Chat Agent
 
 <div align="center">
 
